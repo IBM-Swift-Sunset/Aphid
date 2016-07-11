@@ -7,7 +7,6 @@
 //
 
 import Foundation
-typealias Byte = UInt8
 
 struct ClientOptions  {
 	var Servers:                 [NSURL]

@@ -13,6 +13,8 @@ public func ==(lhs: ConnectionStatus, rhs: ConnectionStatus) -> Bool {
     return true
 }
 
+typealias Byte = UInt8
+
 public protocol AphidAPI {
     func isConnected() -> Bool
     func connect() -> Token
@@ -102,40 +104,21 @@ public class Aphid {
         try socket.connect(to: "localhost", port: 1883)
         print(socket.isConnected)
         
-        // var buffer = [UInt8](repeating: 0x00, count: 5192 )
-        
         let buffer = NSMutableData(capacity: 512)
         let incomingData = NSMutableData(capacity: 5192)
         
         // let keepAliveDuration: UInt16 = 1
-        
-        let clientID = "Bob"
-        
+                
         // construct the packet
     
-        guard let out = buffer else {
+        guard buffer != nil else {
             throw NSError()
         }
         
-        var controlPacket = FixedHeader(messageType: .connect)
-        let connectPacket = ConnectPacket(fixedHeader: controlPacket, keepAliveTimer: 1, clientIdentifier: "test")
+        let controlPacket = FixedHeader(messageType: .connect)
+        var connectPacket = ConnectPacket(fixedHeader: controlPacket, keepAliveTimer: 1, clientIdentifier: "test")
         
-        
-        var length = 10
-        
-        let clientIDData = clientID.data(using: NSUTF8StringEncoding)!
-        
-        length += clientIDData.length
-        
-        controlPacket.remainingLength = UInt8(10 + length + 2)
-        
-        out.append(encode(controlPacket))
-        out.append(encode(connectPacket))
-        out.append(encode(0x00))
-        out.append(encode(0x03))
-        out.append(clientIDData)
-        
-        try socket.write(from: out)
+        try connectPacket.write(writer: socket)
         
         let incomingLength = try socket.read(into: incomingData!)
         

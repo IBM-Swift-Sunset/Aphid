@@ -39,13 +39,7 @@ enum ErrorCodes : Byte {
     case accepted                       = 0x00
     case errRefusedBadProtocolVersion   = 0x01
     case errRefusedIDRejected           = 0x02
-}
-
-protocol ControlPacket {
-    
-    func write(writer: SocketWriter) throws
-    func unpack(reader: SocketReader)
-    func validate()
+    case error                          = 0x03
 }
 
 struct FixedHeader {
@@ -74,7 +68,7 @@ extension FixedHeader {
     func pack() -> NSData {
         let data = NSMutableData()
         data.append(encode(messageType.rawValue << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[1] >> 16) << 2 |
-                                               (encodeUInt16(qos)[1] >> 16) << 1 | encodeBit(dup)))
+                   (encodeUInt16(qos)[1] >> 16) << 1 | encodeBit(dup)))
         data.append(encode(remainingLength))
         return data
     }
@@ -97,8 +91,14 @@ func newControlPacket(packetType: Byte) -> ControlPacket? {
     }
 }
 
-func encodeString(str: String) -> NSData? {
-    return str.data(using: NSUTF8StringEncoding)
+func encodeString(str: String) -> NSData {
+    let array = NSMutableData()
+    let utf = str.data(using: NSUTF8StringEncoding)!
+    let fieldLength: [Byte] = encodeUInt16(UInt16(utf.length))
+    array.append(encode(fieldLength))
+    array.append(utf)
+
+    return array
 }
 
 func encodeBit(_ bool: Bool) -> Byte {
@@ -111,17 +111,44 @@ func encodeUInt16(_ value: UInt16) -> [Byte] {
     bytes[1] = UInt8(value & 0x00ff)
     return bytes
 }
-    
 
-func encodeLength() -> [Byte] {
-    var encLength = [Byte]()
-    
-    return encLength
-}
 
 public func encode<T>(_ value: T) -> NSData {
     var value = value
     return withUnsafePointer(&value) { p in
         NSData(bytes: p, length: sizeofValue(value))
     }
+}
+
+func encodeLength(_ length: Int) -> [UInt8] {
+    var encLength = [Byte]()
+    var length = length
+
+    repeat {
+        var digit = Byte(length % 128)
+        length /= 128
+        if length > 0 {
+            digit |= 0x80
+        }
+        encLength.append(digit)
+
+    } while length != 0
+
+    return encLength
+}
+
+func decodebit(_ byte: Byte) -> Bool {
+    return byte == 0x01 ? true : false
+}
+func decodeString(_ byte: NSData) -> String {
+    return ""
+}
+func decodeUInt16(_ bytes: [Byte]) -> UInt16 {
+    let data = NSData(bytes: bytes, length: 2)
+    return decode(data)
+}
+public func decode<T>(_ data: NSData) -> T {
+    let pointer = UnsafeMutablePointer<T>(allocatingCapacity: sizeof(T))
+    data.getBytes(pointer, length: sizeof(T))
+    return pointer.move()
 }
