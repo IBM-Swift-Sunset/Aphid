@@ -9,15 +9,6 @@
 import Foundation
 import Socket
 
-typealias Byte = UInt8
-
-public func encode<T>( value: T) -> NSData {
-    var value = value
-    return withUnsafePointer(&value) { p in
-        NSData(bytes: p, length: sizeofValue(value))
-    }
-}
-
 let PacketNames : [UInt8:String] = [
     1: "CONNECT",
     2: "CONNACK",
@@ -35,14 +26,19 @@ let PacketNames : [UInt8:String] = [
     14: "DISCONNECT"
 ]
 
+enum ControlCode : Byte {
+    case connect = 0x01
+    case connack = 0x02
+    case publish = 0x03
+}
 let Connect: UInt8  = 1
 let Connack  = 2
 let Publish  = 3
 
-enum errorCodes : Byte {
-    case Accepted                       = 0x00
-    case ErrRefusedBadProtocolVersion   = 0x01
-    case ErrRefusedIDRejected           = 0x02
+enum ErrorCodes : Byte {
+    case accepted                       = 0x00
+    case errRefusedBadProtocolVersion   = 0x01
+    case errRefusedIDRejected           = 0x02
 }
 
 protocol ControlPacket {
@@ -53,11 +49,11 @@ protocol ControlPacket {
 }
 
 struct FixedHeader {
-    let messageType: Byte
+    let messageType: ControlCode
     let dup: Bool
-    let qos: Byte
+    let qos: UInt16
     let retain: Bool
-    let remainingLength: Int
+    var remainingLength: UInt8
 }
 
 struct Details {
@@ -75,15 +71,27 @@ extension FixedHeader: CustomStringConvertible {
 
 extension FixedHeader {
     
-    init(messageType: Byte) {
+    func pack() -> NSData {
+        let data = NSMutableData()
+        data.append(encode(messageType.rawValue << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[1] >> 16) << 2 |
+                                               (encodeUInt16(qos)[1] >> 16) << 1 | encodeBit(dup)))
+        data.append(encode(remainingLength))
+        return data
+    }
+
+    init(messageType: ControlCode) {
         self.messageType = messageType
+        self.dup = true
+        self.qos = 0x01
+        self.retain = true
+        self.remainingLength = 1
     }
 }
 
 func newControlPacket(packetType: Byte) -> ControlPacket? {
     switch packetType {
     case Connect:
-        return ConnectPacket(fixedHeader: FixedHeader(messageType: Connect))
+        return ConnectPacket(fixedHeader: FixedHeader(messageType: .connect), clientIdentifier: "Hello" )
     default:
         return nil
     }
@@ -93,13 +101,27 @@ func encodeString(str: String) -> NSData? {
     return str.data(using: NSUTF8StringEncoding)
 }
 
-func encodeUInt16(int: UInt16) -> [Byte] {
-    var bytes: [Byte] = [0x00, 0x00]
-    return bytes
+func encodeBit(_ bool: Bool) -> Byte {
+    return bool ? 0x01 : 0x00
 }
 
+func encodeUInt16(_ value: UInt16) -> [Byte] {
+    var bytes: [UInt8] = [0x00, 0x00]
+    bytes[0] = UInt8(value >> 8)
+    bytes[1] = UInt8(value & 0x00ff)
+    return bytes
+}
+    
+
 func encodeLength() -> [Byte] {
-    var encLength: [Byte]()
+    var encLength = [Byte]()
     
     return encLength
+}
+
+public func encode<T>(_ value: T) -> NSData {
+    var value = value
+    return withUnsafePointer(&value) { p in
+        NSData(bytes: p, length: sizeofValue(value))
+    }
 }

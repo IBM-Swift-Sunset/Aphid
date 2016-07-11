@@ -17,24 +17,53 @@ struct ConnectPacket {
     var protocolVersion: UInt8
     var cleanSession: Bool
     var willFlag: Bool
-    var willQoS: UInt8
+    var willQoS: UInt16
     var willRetain: Bool
     var usernameFlag: Bool
     var passwordFlag: Bool
-    var reservedBit: UInt8
+    var reservedBit: Bool
     var keepAliveTimer: UInt16
     
     var clientIdentifier: String
-    var willTopic: String
-    var willMessage: [UInt8]
-    var username: String
-    var password: [UInt8]
+    var willTopic: String?
+    var willMessage: String?
+    var username: String?
+    var password: String?
     
-}
-
-extension ConnectPacket {
-    init(fixedHeader: FixedHeader) {
+    init(fixedHeader: FixedHeader,
+         protocolName: String = "MQTT",
+         protocolVersion: UInt8 = 4,
+         cleanSession: Bool = true,
+         willFlag: Bool = true,
+         willQoS: UInt16 = 10,
+         willRetain: Bool = true,
+         usernameFlag: Bool = false,
+         passwordFlag: Bool = false,
+         reservedBit: Bool = false,
+         keepAliveTimer: UInt16 = 30,
+         clientIdentifier: String,
+         willTopic: String? = nil,
+         willMessage: String? = nil,
+         username: String? = nil,
+         password: String? = nil){
+        
         self.fixedHeader = fixedHeader
+        self.protocolName = protocolName
+        self.protocolVersion = protocolVersion
+        self.cleanSession = cleanSession
+        self.willFlag = willFlag
+        self.willQoS = willQoS
+        self.willRetain = willRetain
+        self.usernameFlag = usernameFlag
+        self.passwordFlag = passwordFlag
+        self.reservedBit = reservedBit
+        self.keepAliveTimer = keepAliveTimer
+        
+        self.clientIdentifier = clientIdentifier
+        self.willTopic = willTopic
+        self.willMessage = willMessage
+        self.username = username
+        self.password = password
     }
 }
 
@@ -47,9 +76,10 @@ extension ConnectPacket : ControlPacket {
         }
         
         buffer.append( encodeString(str: self.protocolName)!)
-        buffer.append( encode(value: self.protocolVersion) )
-        buffer.append( encode(value:))
+        buffer.append( encode(self.protocolVersion) )
+        //buffer.append( encode(value:))
         
+        try writer.write(from: buffer)
         
     }
     

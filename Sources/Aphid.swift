@@ -2,30 +2,65 @@
 import Foundation
 import Socket
 
+public struct Token {
+
+}
+public struct ConnectionStatus: Equatable {
+    
+}
+
+public func ==(lhs: ConnectionStatus, rhs: ConnectionStatus) -> Bool {
+    return true
+}
+
+public protocol AphidAPI {
+    func isConnected() -> Bool
+    func connect() -> Token
+    func disconnect(uint: UInt)
+    func publish(topic: String, byte: UInt8, isRetained: Bool) -> Token
+    func subscribe(topic: String, byte: UInt8, callback: (String)) -> Token //MessageHandler
+    func subscribeMultiple() -> Token
+    func unsubscribe(topics: [String]) -> Token
+}
+
+
+struct Attributes {
+/*    var conn:            net.Conn
+    var ibound:          chan packets.ControlPacket
+    var obound:          chan *PacketAndToken
+    var oboundP:         chan *PacketAndToken
+    var msgRouter:       *router
+    var stopRouter:      chan bool
+    var incomingPubChan: chan *packets.PublishPacket
+    var errors:         chan error
+    var stop:            chan struct{}
+    var persist:         Store
+    var options:         ClientOptions
+    var pingTimer:       *time.Timer
+    var pingRespTimer:   *time.Timer
+    var pingResp:        chan struct{}*/
+    var status:          ConnectionStatus
+    //var workers:         sync.WaitGroup
+
+}
+
+let disconnected = ConnectionStatus()
+let connected = ConnectionStatus()
 // Aphid
 public class Aphid {
     
-    
-    
-    
+    /*var attributes: Attributes
+    var options: ClientOptions
+
+    init() {
+        attributes = Attributes(status: disconnected)
+        options = ClientOptions()
+    }*/
     enum ControlPacketType: UInt8 {
         case connect = 0x10
         case publish = 0x03
         case pubAck  = 0x40
     }
-    
-    
-    
-    struct FixedHeader {
-        var type: UInt8
-        var remainingLength: UInt8 = 0
-        
-        init(type: ControlPacketType) {
-            self.type = type.rawValue
-        }
-    }
-    
-    
     
     public func connect() throws {
     
@@ -82,8 +117,9 @@ public class Aphid {
             throw NSError()
         }
         
-        var controlPacket = FixedHeader(type: .connect)
-        let connectPacket = ConnectPacket(level: 4, keepAlive: 1)
+        var controlPacket = FixedHeader(messageType: .connect)
+        let connectPacket = ConnectPacket(fixedHeader: controlPacket, keepAliveTimer: 1, clientIdentifier: "test")
+        
         
         var length = 10
         
@@ -93,10 +129,10 @@ public class Aphid {
         
         controlPacket.remainingLength = UInt8(10 + length + 2)
         
-        out.append(encode(value: controlPacket))
-        out.append(encode(value: connectPacket))
-        out.append(encode(value: 0x00))
-        out.append(encode(value: 0x03))
+        out.append(encode(controlPacket))
+        out.append(encode(connectPacket))
+        out.append(encode(0x00))
+        out.append(encode(0x03))
         out.append(clientIDData)
         
         try socket.write(from: out)
@@ -106,5 +142,38 @@ public class Aphid {
         print(incomingLength)
         
     }
+    /*func isConnected() -> Bool {
+        if attributes.status == connected {
+            return true
+        } else if attributes.options.AutoReconnect && attributes.status > disconnected {
+            return true
+        }
+        else {
+            return false
+        }
+    }
+    func disconnect(uint: UInt){
+        guard !isConnected() else {
+            NSLog("Already Disconnected")
+            return
+        }
+        
+        self.attributes.status = disconnected
+        
+        
+    }
+    func publish(topic: String, byte: UInt8, isRetained: Bool) -> Token {
+        
+    }
+    func subscribe(topic: String, byte: UInt8, callback: (String)) -> Token { //MessageHandler
     
+    }
+    func subscribeMultiple() -> Token {
+    
+    }
+    func unsubscribe(topics: [String]) -> Token {
+        
+    }*/
+
 }
+
