@@ -6,11 +6,7 @@ import Socket
 public class Aphid {
     
     
-    func connectFlags(cleanSession: Bool, willFlag: Bool, willQoS: Bool ) -> UInt8 {
-        
-        return 0x00
-        
-    }
+    
     
     enum ControlPacketType: UInt8 {
         case connect = 0x10
@@ -18,25 +14,18 @@ public class Aphid {
         case pubAck  = 0x40
     }
     
-    func encode<T>( value: T) -> NSData {
-        var value = value
-        return withUnsafePointer(&value) { p in
-            NSData(bytes: p, length: sizeofValue(value))
+    
+    
+    struct FixedHeader {
+        var type: UInt8
+        var remainingLength: UInt8 = 0
+        
+        init(type: ControlPacketType) {
+            self.type = type.rawValue
         }
     }
     
-    struct FixedHeader {
-        var type: ControlPacketType
-        var remainingLength: UInt8 = 0
-    }
     
-    struct ConnectPacket {
-        let mqtt: [UInt8] = [0x4C, 0x51, 0x54, 0x54]
-        let level: UInt8 = 0x04
-        let flags: UInt8 = 0x00
-        let keepAliveMSB: UInt8 = 0x00
-        let keepAliveLSB: UInt8 = 0x01
-    }
     
     public func connect() throws {
     
@@ -93,47 +82,22 @@ public class Aphid {
             throw NSError()
         }
         
-        var controlPacket = FixedHeader(type: .connect, remainingLength: 0)
-        let connectPacket = ConnectPacket()
+        var controlPacket = FixedHeader(type: .connect)
+        let connectPacket = ConnectPacket(level: 4, keepAlive: 1)
         
-        var length = sizeof(FixedHeader) + sizeof(ConnectPacket)
-        
-        print("Remaining length is \(length)")
-        
-        
-        
-//        out.append(encode(value: 0x10))
-//        out.append(encode(value: 0)) // length
-//        out.append(encode(value: 0x4C))
-//        out.append(encode(value: 0x51))
-//        out.append(encode(value: 0x54))
-//        out.append(encode(value: 0x54))
-//        out.append(encode(value: 0x04))
-//        out.append(encode(value: 0x00))
-//        out.append(encode(value: 0x00))
-//        out.append(encode(value: 0x01))
-        
-        // buffer[0] = Aphid.CONNECT
-//        buffer[1] = 0               // length TODO
-//        buffer[2] = 0x4C            // M
-//        buffer[3] = 0x51            // Q
-//        buffer[4] = 0x54            // T
-//        buffer[5] = 0x54            // T
-//        buffer[6] = 0x04            // protocol level 4
-//        buffer[7] = connectFlags(cleanSession: false, willFlag: false, willQoS: false)
-//        buffer[8] = 0x00            // keep alive duration
-//        buffer[9] = 0x01            // 1 second
+        var length = 10
         
         let clientIDData = clientID.data(using: NSUTF8StringEncoding)!
         
         length += clientIDData.length
         
-        controlPacket.remainingLength = UInt8(10 + length)
+        controlPacket.remainingLength = UInt8(10 + length + 2)
         
         out.append(encode(value: controlPacket))
         out.append(encode(value: connectPacket))
+        out.append(encode(value: 0x00))
+        out.append(encode(value: 0x03))
         out.append(clientIDData)
-        
         
         try socket.write(from: out)
         
