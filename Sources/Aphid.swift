@@ -36,11 +36,8 @@ struct Attributes {
     var incomingPubChan: chan *packets.PublishPacket
     var errors:         chan error
     var stop:            chan struct{}
-    var persist:         Store
+    var persist:         Store*/
     var options:         ClientOptions
-    var pingTimer:       *time.Timer
-    var pingRespTimer:   *time.Timer
-    var pingResp:        chan struct{}*/
     var status:          ConnectionStatus
     //var workers:         sync.WaitGroup
 
@@ -51,13 +48,13 @@ let connected = ConnectionStatus()
 // Aphid
 public class Aphid {
     
-    /*var attributes: Attributes
-    var options: ClientOptions
+    var attributes: Attributes
 
     init() {
-        attributes = Attributes(status: disconnected)
-        options = ClientOptions()
-    }*/
+        attributes = Attributes(options: ClientOptions(), status: disconnected)
+        
+    }
+    
     enum ControlPacketType: UInt8 {
         case connect = 0x10
         case publish = 0x03
@@ -106,17 +103,13 @@ public class Aphid {
         
         let buffer = NSMutableData(capacity: 512)
         let incomingData = NSMutableData(capacity: 5192)
-        
-        // let keepAliveDuration: UInt16 = 1
-                
-        // construct the packet
-    
+            
         guard buffer != nil else {
             throw NSError()
         }
         
         let controlPacket = FixedHeader(messageType: .connect)
-        var connectPacket = ConnectPacket(fixedHeader: controlPacket, keepAliveTimer: 1, clientIdentifier: "test")
+        var connectPacket = ConnectPacket(fixedHeader: controlPacket, keepAliveTimer: 1,  clientOptions: attributes.options, clientIdentifier: "test")
         
         try connectPacket.write(writer: socket)
         
@@ -125,10 +118,10 @@ public class Aphid {
         print(incomingLength)
         
     }
-    /*func isConnected() -> Bool {
+    func isConnected() -> Bool {
         if attributes.status == connected {
             return true
-        } else if attributes.options.AutoReconnect && attributes.status > disconnected {
+        } else if attributes.options.AutoReconnect && attributes.status == disconnected {
             return true
         }
         else {
@@ -146,17 +139,17 @@ public class Aphid {
         
     }
     func publish(topic: String, byte: UInt8, isRetained: Bool) -> Token {
-        
+        return Token()
     }
     func subscribe(topic: String, byte: UInt8, callback: (String)) -> Token { //MessageHandler
-    
+        return Token()
     }
     func subscribeMultiple() -> Token {
-    
+        return Token()
     }
     func unsubscribe(topics: [String]) -> Token {
-        
-    }*/
+        return Token()
+    }
 
 }
 

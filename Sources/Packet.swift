@@ -85,7 +85,7 @@ extension FixedHeader {
 func newControlPacket(packetType: Byte) -> ControlPacket? {
     switch packetType {
     case Connect:
-        return ConnectPacket(fixedHeader: FixedHeader(messageType: .connect), clientIdentifier: "Hello" )
+        return nil//ConnectPacket(fixedHeader: FixedHeader(messageType: .connect), clientIdentifier: "Hello" )
     default:
         return nil
     }
@@ -112,6 +112,10 @@ func encodeUInt16(_ value: UInt16) -> [Byte] {
     return bytes
 }
 
+func encodeUInt16(_ value: UInt16) -> NSData {
+    var value = value
+    return NSData(bytes: &value, length: sizeof(UInt16))
+}
 
 public func encode<T>(_ value: T) -> NSData {
     var value = value
@@ -140,15 +144,29 @@ func encodeLength(_ length: Int) -> [UInt8] {
 func decodebit(_ byte: Byte) -> Bool {
     return byte == 0x01 ? true : false
 }
-func decodeString(_ byte: NSData) -> String {
-    return ""
+func decodeString(_ bytes: [Byte]) -> String {
+    return String(bytes: bytes, encoding: NSUTF8StringEncoding)!
 }
 func decodeUInt16(_ bytes: [Byte]) -> UInt16 {
-    let data = NSData(bytes: bytes, length: 2)
+    let data = NSData(bytes: bytes.reversed(), length: 2)
     return decode(data)
 }
 public func decode<T>(_ data: NSData) -> T {
     let pointer = UnsafeMutablePointer<T>(allocatingCapacity: sizeof(T))
     data.getBytes(pointer, length: sizeof(T))
     return pointer.move()
+}
+func decodeLength(_ bytes: [Byte]) -> Int {
+    var rLength: UInt32 = 0
+    var multiplier: UInt32 = 0
+    var b: [Byte] = [0x00]
+    while true {
+        let digit = b[0]
+        rLength |= UInt32(digit & 127) << multiplier
+        if (digit & 128) == 0 {
+            break
+        }
+        multiplier += 7
+    }
+    return Int(rLength)
 }

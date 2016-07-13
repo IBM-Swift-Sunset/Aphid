@@ -23,16 +23,16 @@ struct ClientOptions  {
 	var ProtocolVersion:         UInt
 	var protocolVersionExplicit: Bool
 	//var TLSConfig:               tls.Config
-	/*var KeepAlive:               NSDate
-	var PingTimeout:             NSDate
-	var ConnectTimeout:          NSDate
-	var MaxReconnectInterval:    NSDate*/
+	var KeepAlive:               UInt16
+	var PingTimeout:             UInt16
+	var ConnectTimeout:          UInt16
+	var MaxReconnectInterval:    UInt16
 	var AutoReconnect:           Bool
 	/*var Store:                   Store?
 	var DefaultPublishHander:    MessageHandler
 	var OnConnect:               OnConnectHandler?
-	var OnConnectionLost:        ConnectionLostHandler
-	var WriteTimeout:            time.Duration*/
+	var OnConnectionLost:        ConnectionLostHandler*/
+	var WriteTimeout:            UInt16?
 	var MessageChannelDepth:     UInt
     
     init() {
@@ -50,15 +50,15 @@ struct ClientOptions  {
         ProtocolVersion = 0
         protocolVersionExplicit = false
         //TLSConfig = tls.Config{}
-        /*KeepAlive = 30 * time.Second
-        PingTimeout = 10 * time.Second
-        ConnectTimeout = 30 * time.Second
-        MaxReconnectInterval = 10 * time.Minute*/
+        KeepAlive = 30
+        PingTimeout = 10
+        ConnectTimeout = 30
+        MaxReconnectInterval = 10
         AutoReconnect = true
         /*Store = nil
         OnConnect = nil
-        OnConnectionLost = DefaultConnectionLostHandler
-        WriteTimeout = 0 // 0 represents timeout disabled*/
+        OnConnectionLost = DefaultConnectionLostHandler*/
+        WriteTimeout = nil // nil represents timeout disabled
         MessageChannelDepth = 100
     }
     
