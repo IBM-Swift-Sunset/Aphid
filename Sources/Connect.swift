@@ -83,7 +83,6 @@ extension ConnectPacket : ControlPacket {
             throw NSError()
         }
         
-        buffer.append( fixedHeader.pack())
         buffer.append( encodeString(str: protocolName))
         buffer.append( encode(protocolVersion) )
         buffer.append( encode(encodeBit(cleanSession) << 1 | encodeBit(willFlag) << 2 | (willQoS >> 1) << 3 | willQoS << 3 |
@@ -105,10 +104,11 @@ extension ConnectPacket : ControlPacket {
         }
         
         fixedHeader.remainingLength = UInt8(encodeLength(buffer.length).count)
-        
+        let packet = fixedHeader.pack()
+        packet.append(buffer)
         
         do {
-            try writer.write(from: buffer)
+            try writer.write(from: packet)
 
         } catch {
             throw error
@@ -122,11 +122,10 @@ extension ConnectPacket : ControlPacket {
        do {
             let data = NSMutableData()
             let _ = try reader.read(into: data)
-            let bytes: [Byte] = decode(data)
 
-            self.protocolName = decodeString([bytes[0]])
-            self.protocolVersion = bytes[1]
-            let options = bytes[2]
+            self.protocolName = decodeString(reader)
+            self.protocolVersion = decodeUInt8(reader)
+            let options = decodeUInt8(reader)
             
             self.reservedBit  = decodebit(1 & options)
             self.cleanSession = decodebit(1 & (options >> 1))
@@ -136,19 +135,22 @@ extension ConnectPacket : ControlPacket {
             self.usernameFlag = decodebit(1 & (options >> 6))
             self.passwordFlag = decodebit(1 & (options >> 7))
             
-            self.keepAliveTimer = decodeUInt16([bytes[3]])
-            self.clientIdentifier = decodeString([bytes[4]])
+            self.keepAliveTimer = decodeUInt16(reader)
+
+            //Payload
+            self.clientIdentifier = decodeString(reader)
             
             if willFlag {
-                self.willTopic = decodeString([bytes[5]])
-                self.willMessage = decodeString([bytes[6]])
+                self.willTopic = decodeString(reader)
+                self.willMessage = decodeString(reader)
             }
             if usernameFlag {
-                self.username = decodeString([bytes[7]])
+                self.username = decodeString(reader)
             }
             if passwordFlag {
-                self.password = decodeString([bytes[8]])
+                self.password = decodeString(reader)
             }
+
         } catch {
             print(error)
         }

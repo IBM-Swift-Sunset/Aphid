@@ -41,18 +41,32 @@ enum ErrorCodes : Byte {
     case errRefusedIDRejected           = 0x02
     case error                          = 0x03
 }
-
+struct Details {
+    var qos: Byte
+    var messageID: UInt16
+}
 struct FixedHeader {
     let messageType: ControlCode
     let dup: Bool
     let qos: UInt16
     let retain: Bool
     var remainingLength: UInt8
-}
-
-struct Details {
-    var qos: Byte
-    var messageID: UInt16
+    
+    init(messageType: ControlCode) {
+        self.messageType = messageType
+        self.dup = true
+        self.qos = 0x01
+        self.retain = true
+        self.remainingLength = 1
+    }
+    
+    func pack() -> NSMutableData {
+        let data = NSMutableData()
+        data.append(encode(messageType.rawValue << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[1] >> 16) << 2 |
+                   (encodeUInt16(qos)[1] >> 16) << 1 | encodeBit(dup)))
+        data.append(encode(remainingLength))
+        return data
+    }
 }
 
 extension FixedHeader: CustomStringConvertible {
@@ -61,25 +75,6 @@ extension FixedHeader: CustomStringConvertible {
         return "\(messageType): dup: \(dup) qos: \(qos)"
     }
     
-}
-
-extension FixedHeader {
-    
-    func pack() -> NSData {
-        let data = NSMutableData()
-        data.append(encode(messageType.rawValue << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[1] >> 16) << 2 |
-                   (encodeUInt16(qos)[1] >> 16) << 1 | encodeBit(dup)))
-        data.append(encode(remainingLength))
-        return data
-    }
-
-    init(messageType: ControlCode) {
-        self.messageType = messageType
-        self.dup = true
-        self.qos = 0x01
-        self.retain = true
-        self.remainingLength = 1
-    }
 }
 
 func newControlPacket(packetType: Byte) -> ControlPacket? {
@@ -124,7 +119,7 @@ public func encode<T>(_ value: T) -> NSData {
     }
 }
 
-func encodeLength(_ length: Int) -> [UInt8] {
+func encodeLength(_ length: Int) -> [Byte] {
     var encLength = [Byte]()
     var length = length
 
@@ -144,12 +139,33 @@ func encodeLength(_ length: Int) -> [UInt8] {
 func decodebit(_ byte: Byte) -> Bool {
     return byte == 0x01 ? true : false
 }
-func decodeString(_ bytes: [Byte]) -> String {
-    return String(bytes: bytes, encoding: NSUTF8StringEncoding)!
+func decodeString(_ reader: SocketReader) -> String {
+    let fieldLength = decodeUInt16(reader)
+    let field = NSMutableData(capacity: Int(fieldLength))
+    do {
+       let _ = try reader.read(into: field!)
+    } catch {
+        
+    }
+    return String(field)
 }
-func decodeUInt16(_ bytes: [Byte]) -> UInt16 {
-    let data = NSData(bytes: bytes.reversed(), length: 2)
-    return decode(data)
+func decodeUInt8(_ reader: SocketReader) -> UInt8 {
+    let num = NSMutableData(capacity: 1)
+    do {
+        let _ = try reader.read(into: num!)
+    } catch {
+        
+    }
+    return decode(num!)
+}
+func decodeUInt16(_ reader: SocketReader) -> UInt16 {
+    let uint = NSMutableData(capacity: 2)
+    do {
+        let _ = try reader.read(into: uint!)
+    } catch {
+        
+    }
+    return decode(uint!)
 }
 public func decode<T>(_ data: NSData) -> T {
     let pointer = UnsafeMutablePointer<T>(allocatingCapacity: sizeof(T))
