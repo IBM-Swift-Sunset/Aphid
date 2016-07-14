@@ -17,8 +17,8 @@ class PubrelPacket {
 
     init(header: FixedHeader) {
         self.header = header
-        self.flags = 0x00
-        self.responseCode = 0x00
+        self.messageIDMSB = 0x00
+        self.messageIDLSB = 0x00
     }
 
     init?(reader: SocketReader) {
@@ -26,7 +26,7 @@ class PubrelPacket {
         let _ = decodeUInt8(reader)
         header = FixedHeader(messageType: ControlCode(rawValue: code)!)
         messageIDMSB = decodeUInt8(reader)
-        messageIDLSB = decodeUint8(reader)
+        messageIDLSB = decodeUInt8(reader)
     }
 }
 
