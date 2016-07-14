@@ -10,7 +10,7 @@ import Foundation
 import Socket
 
 class ConnackPacket {
-    let header: FixedHeader
+    var header: FixedHeader
     var flags: Byte
     // ----------- //
     // 0 - Accepted | 1 - Unacceptable Protocol | 2 - Identifier Invalid | 3  - Server Unavailable
@@ -46,9 +46,9 @@ extension ConnackPacket: ControlPacket {
             throw NSError()
         }
         
-        buffer.append(encodeUInt8(flags))
-        buffer.append(encodeUInt8(responseCode))
-        
+        buffer.append(flags.data)
+        buffer.append(responseCode.data)
+        header.remainingLength = 2
         var packet = header.pack()
         packet.append(buffer)
         
@@ -75,9 +75,7 @@ func parseConnack(reader: SocketReader) {
     let flags = decodeUInt8(reader)
     let responseCode = decodeUInt8(reader)
     
-    print("Connack Packet Information")
-    print(code)
-    print(length)
-    print(flags)
-    print(responseCode)
+    print("Connack Packet Information -- in Int form")
+    print("Code \(code)   | Length \(length)")
+    print("Flags \(flags) | Response \(responseCode)")
 }

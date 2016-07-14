@@ -53,9 +53,9 @@ enum ErrorCodes : Byte {
     case errRefusedIDRejected           = 0x02
     case error                          = 0x03
 }
-enum qosType: UInt8 {
+enum qosType: Byte {
     case atMostOnce = 0 // At Most One Delivery
-    case atLeave = 1 // At Least Deliver Once
+    case atLeastOnce = 1 // At Least Deliver Once
     case exactlyOnce = 2 // Deliver Exactly Once
 }
 struct Details {
@@ -65,24 +65,23 @@ struct Details {
 struct FixedHeader {
     let messageType: Byte
     var dup: Bool
-    var qos: UInt16
+    var qos: Byte
     var retain: Bool
-    var remainingLength: [Byte]
+    var remainingLength: Int
     
     init(messageType: ControlCode) {
         self.messageType = UInt8(messageType.rawValue & 0xF0) >> 4
-        dup = decodebit(messageType.rawValue & 0x08 >> 3)
-        qos = UInt16(messageType.rawValue & 0x06 >> 1)
-        retain = decodebit(messageType.rawValue & 0x01)
-        remainingLength = [0x00]
+        dup = (messageType.rawValue & 0x08 >> 3).bool
+        qos = messageType.rawValue & 0x06 >> 1
+        retain = (messageType.rawValue & 0x01).bool
+        remainingLength = 0
     }
     
     func pack() -> Data {
         var data = Data()
-        data.append(encodeUInt8(messageType << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[0] >> 7) << 2 |
-                         (encodeUInt16(qos)[1] >> 7) << 1 | encodeBit(dup)))
+        data.append((messageType << 4 | dup.toByte << 3 | qos << 1 | retain.toByte).data)
 
-        for byte in remainingLength {
+        for byte in encodeLength(remainingLength) {
             data.append(encodeUInt8(byte))
         }
         
@@ -99,18 +98,34 @@ extension FixedHeader: CustomStringConvertible {
 }
 
 extension Aphid {
-    func newControlPacket(packetType: ControlCode) -> ControlPacket? {
+    func newControlPacket(packetType: ControlCode, topicName: String? = nil, packetId: UInt16? = nil ) -> ControlPacket? {
         switch packetType {
         case .connect:
             return ConnectPacket(header: FixedHeader(messageType: .connect), clientId: clientId )
         case .connack:
             return ConnackPacket(header: FixedHeader(messageType: .connack))
         case .publish:
-            return PublishPacket(header: FixedHeader(messageType: .publish), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return PublishPacket(header: FixedHeader(messageType: .publish), topicName: topicName!, packetIdentifier: packetId!)
+        case .puback:
+            return PublishPacket(header: FixedHeader(messageType: .puback), topicName: "Test", packetIdentifier: 0x00) // Wrong
+        case .pubrec:
+            return PublishPacket(header: FixedHeader(messageType: .pubrec), topicName: "Test", packetIdentifier: 0x00) // Wrong
+        case .pubrel:
+            return PublishPacket(header: FixedHeader(messageType: .pubrel), topicName: "Test", packetIdentifier: 0x00) // Wrong
+        case .pubcomp:
+            return PublishPacket(header: FixedHeader(messageType: .pubcomp), topicName: "Test", packetIdentifier: 0x00) // Wrong
         case .subscribe:
-            return SubscribePacket(header: FixedHeader(messageType: .subscribe), messageID: 0, topics: [String](), qoss: [Byte]())  // Wrong
+            return SubscribePacket(header: FixedHeader(messageType: .subscribe), messageID: 0, topics: [String](), qoss: [Byte]())// Wrong
+        case .suback:
+            return PublishPacket(header: FixedHeader(messageType: .suback), topicName: "Test", packetIdentifier: 0x00) // Wrong
         case .unsubscribe:
             return UnsubscribePacket(header: FixedHeader(messageType: .unsubscribe), messageID: 0x00, topics: [String]()) // Wrong
+        case .unsuback:
+            return PublishPacket(header: FixedHeader(messageType: .unsuback), topicName: "Test", packetIdentifier: 0x00) // Wrong
+        case .pingreq:
+            return PingreqPacket(header: FixedHeader(messageType: .pingreq))
+        case .pingresp:
+            return PublishPacket(header: FixedHeader(messageType: .pingresp), topicName: "Test", packetIdentifier: 0x00) // Wrong
         case .disconnect:
             return DisconnectPacket(header: FixedHeader(messageType: .disconnect))
         default:
@@ -119,20 +134,71 @@ extension Aphid {
     }
 }
 
+
+extension Bool {
+    var toByte: Byte {
+        get {
+            return self ? 0x01 : 0x00
+        }
+    }
+}
+extension String {
+    var data: Data {
+        get {
+            var array = Data()
+            
+            let utf = self.data(using: String.Encoding.utf8)!
+            
+            array.append(UInt16(utf.count).data)
+            array.append(utf)
+            
+            return array
+        }
+    }
+}
+extension UInt8 {
+    var data: Data {
+        return Data(bytes: [self])
+    }
+    
+    var bool: Bool {
+        return self == 0x01 ? true : false
+    }
+}
+extension UInt16 {
+    var data: Data {
+        get {
+            var data = Data()
+            var bytes: [UInt8] = [0x00, 0x00]
+            bytes[0] = UInt8(self >> 8)
+            bytes[1] = UInt8(self & 0x00ff)
+            data.append(Data(bytes: bytes, count: 2))
+            return data
+        }
+    }
+    var bytes: [Byte] {
+        get {
+            var bytes: [UInt8] = [0x00, 0x00]
+            bytes[0] = UInt8(self >> 8)
+            bytes[1] = UInt8(self & 0x00ff)
+            return bytes
+        }
+    }
+}
 func encodeString(str: String) -> Data {
     var array = Data()
     
     let utf = str.data(using: String.Encoding.utf8)!
-    array.append(encodeUInt16T(UInt16(utf.count)))
+    
+    array.append(encodeUInt16ToData(UInt16(utf.count)))
     array.append(utf)
+    
     return array
 }
-
 func encodeBit(_ bool: Bool) -> Byte {
     return bool ? 0x01 : 0x00
 }
-
-func encodeUInt16T(_ value: UInt16) -> Data {
+func encodeUInt16ToData(_ value: UInt16) -> Data {
     var data = Data()
     var bytes: [UInt8] = [0x00, 0x00]
     bytes[0] = UInt8(value >> 8)

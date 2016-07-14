@@ -70,13 +70,12 @@ public class Aphid {
         try sock.setBlocking(mode: true)
         
         try sock.connect(to: host, port: port)
-        print("Socket is connected? \(sock.isConnected)")
     
         try connectPacket.write(writer: sock)
         
-        //let incomingData = NSMutableData(capacity: 5192)
-        //let incomingLength = try sock.read(into: incomingData!)
-        //print(incomingData!.length, incomingLength)
+        /*let incomingData = NSMutableData(capacity: 5192)
+        let incomingLength = try sock.read(into: incomingData!)
+        print(incomingData!.length, incomingLength)*/
 
         let _ = parseConnack(reader: sock)
 
@@ -113,7 +112,7 @@ public class Aphid {
     func publish(topic: String, withString string: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
         
         guard let sock = socket,
-            publishPacket = newControlPacket(packetType: .publish) else {
+                  publishPacket = newControlPacket(packetType: .publish, topicName: "insects", packetId: 1) else {
 
                 return 0
         }
@@ -128,20 +127,22 @@ public class Aphid {
         }
     }
     func publish(message: String) -> UInt16 {
-
         guard let sock = socket,
-            publishPacket = newControlPacket(packetType: .publish) else {
+                  publishPacket = newControlPacket(packetType: .publish, topicName: message, packetId: 1) else {
                 
                 return 0
         }
-        
+        print("connected?", sock.isConnected, "active?", sock.isActive)
         do {
             try publishPacket.write(writer: sock)
+            let data = NSMutableData(capacity: 150)
+            let length = try sock.read(into: data!)
+            print("length", length)
             return 1
 
         } catch {
-            
             return 0
+
         }
     }
 

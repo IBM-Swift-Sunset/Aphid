@@ -11,17 +11,23 @@ import Socket
 
 class PublishPacket {
     var header: FixedHeader
-    let dupFlag: Bool
-    let qos: UInt16
+    let dup: Bool
+    let qos: qosType
     let willRetain: Bool
-    let topicName: String
-    let identifier: UInt16
-    let payload: [String]
+    var topicName: String
+    var identifier: UInt16
+    var payload: [String]
     
-    init(header: FixedHeader, dupFlag: Bool = false, qos: UInt16 = 0x0010, willRetain: Bool = false,
+    init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
          topicName: String, packetIdentifier: UInt16, payload: [String] = []) {
+        
+        var header = header
+        header.dup = dup
+        header.qos = qos.rawValue
+        header.retain = willRetain
+
         self.header = header
-        self.dupFlag = dupFlag
+        self.dup = dup
         self.qos = qos
         self.willRetain = willRetain
         self.topicName = topicName
@@ -36,26 +42,47 @@ extension PublishPacket: ControlPacket {
             throw NSError()
         }
         
-        buffer.append(encodeString(str: topicName))
-        if qos == 1 || qos == 2 {
-            buffer.append(encodeUInt16T(identifier))
+        buffer.append(topicName.data)
+
+        if qos.rawValue > 0 {
+            buffer.append(identifier.data)
         }
-        header.remainingLength = encodeLength(buffer.count + payload.count)
+        
+        for item in payload {
+            buffer.append(item.data)
+        }
+        header.remainingLength = buffer.count + payload.count //payload count cant be pstring
         
         var packet = header.pack()
         packet.append(buffer)
         
         do {
             try writer.write(from: packet)
+
         } catch {
             throw NSError()
+
         }
         
     }
+
     func unpack(reader: SocketReader) {
-        let topic = decodeString(reader)
+        var payloadSize = header.remainingLength
+        topicName = decodeString(reader)
+        if qos.rawValue > 0 {
+            identifier = decodeUInt16(reader)
+            payloadSize -= topicName.characters.count + 4
+        } else {
+            payloadSize -= topicName.characters.count + 2
+        }
+        var payload = [String]()
+
+        for _ in 0..<payloadSize {
+            payload.append(decodeString(reader))
+        }
         
     }
+
     func validate() -> ErrorCodes {
         return .accepted
     }

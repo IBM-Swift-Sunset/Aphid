@@ -28,13 +28,13 @@ extension UnsubscribePacket : ControlPacket {
             throw NSError()
         }
         
-        buffer.append(encodeUInt16T(messageID))
+        buffer.append(encodeUInt16ToData(messageID))
         
         for i in 0..<topics.count {
             buffer.append(encodeString(str: topics[i]))
         }
         
-        header.remainingLength = encodeLength(buffer.count)
+        header.remainingLength = buffer.count
         let _ = header.pack()
         
         do {

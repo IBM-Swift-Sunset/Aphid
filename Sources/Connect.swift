@@ -46,7 +46,7 @@ class ConnectPacket {
          usernameFlag: Bool = false,
          passwordFlag: Bool = false,
          reservedBit: Bool = false,
-         keepAlive: UInt16 = 10,
+         keepAlive: UInt16 = 15,
          clientId: String,
          willTopic: String? = nil,
          willMessage: String? = nil,
@@ -80,25 +80,25 @@ extension ConnectPacket : ControlPacket {
             throw NSError()
         }
 
-        buffer.append( encodeString(str: protocolName))
-        buffer.append( encodeUInt8(protocolVersion) )
-        buffer.append( encodeUInt8(encodeBit(cleanSession) << 1 | encodeBit(willFlag) << 2 | (willQoS.rawValue >> 1) << 3 | willQoS.rawValue << 3 | encodeBit(willRetain) << 5 | encodeBit(passwordFlag) << 6 | encodeBit(usernameFlag) << 7))
-        buffer.append( encodeUInt16T(keepAlive))
+        buffer.append(protocolName.data)
+        buffer.append(protocolVersion.data)
+        buffer.append(flags.data)
+        buffer.append(keepAlive.data)
 
         //Begin Payload
-        buffer.append( encodeString(str: clientId))
+        buffer.append(clientId.data)
         if willFlag {
-            buffer.append( encodeString(str: willTopic!))
-            buffer.append( encodeString(str: willMessage!))
+            buffer.append(willTopic!.data)
+            buffer.append(willMessage!.data)
         }
         if usernameFlag {
-            buffer.append( encodeString(str: username!))
+            buffer.append(username!.data)
         }
         if passwordFlag {
-             buffer.append( encodeString(str: password!))
+             buffer.append(password!.data)
         }
 
-        header.remainingLength = encodeLength(buffer.count) //16 // UInt8(encodeLength(buffer.count).count)
+        header.remainingLength = buffer.count
         
         var packet = header.pack()
         packet.append(buffer)
@@ -168,6 +168,13 @@ extension ConnectPacket : ControlPacket {
         }
         return .accepted
     }
-    
-    
+}
+
+extension ConnectPacket {
+    var flags: UInt8 {
+        get {
+            return (cleanSession.toByte << 1 | willFlag.toByte << 2 | willQoS.rawValue << 3  |
+                    willRetain.toByte << 5 | passwordFlag.toByte << 6 | usernameFlag.toByte << 7)
+        }
+    }
 }

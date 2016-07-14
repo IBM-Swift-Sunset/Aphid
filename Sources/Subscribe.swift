@@ -31,13 +31,14 @@ extension SubscribePacket : ControlPacket {
             throw NSError()
         }
         
-        buffer.append(encodeUInt16T(messageID))
+        buffer.append(encodeUInt16ToData(messageID))
         
         for (topic, qos) in zip(topics, qoss) {
             buffer.append(encodeString(str: topic))
             buffer.append(encodeUInt8(qos))
         }
         
+        header.remainingLength = buffer.count
         var packet = header.pack()
         packet.append(buffer)
 
