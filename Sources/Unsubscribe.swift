@@ -24,7 +24,7 @@ class UnsubscribePacket {
 extension UnsubscribePacket : ControlPacket {
 
     func write(writer: SocketWriter) throws {
-        guard let buffer = NSMutableData(capacity: 512) else {
+        guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
         
@@ -34,7 +34,7 @@ extension UnsubscribePacket : ControlPacket {
             buffer.append(encodeString(str: topics[i]))
         }
         
-        header.remainingLength = UInt8(buffer.length)
+        header.remainingLength = encodeLength(buffer.count)
         let _ = header.pack()
         
         do {

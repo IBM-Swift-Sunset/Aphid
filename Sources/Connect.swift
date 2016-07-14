@@ -98,7 +98,7 @@ extension ConnectPacket : ControlPacket {
              buffer.append( encodeString(str: password!))
         }
 
-        header.remainingLength = encodeLength(buffer.count)[0]//16 // UInt8(encodeLength(buffer.count).count)
+        header.remainingLength = encodeLength(buffer.count) //16 // UInt8(encodeLength(buffer.count).count)
         
         var packet = header.pack()
         packet.append(buffer)

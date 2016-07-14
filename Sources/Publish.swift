@@ -40,7 +40,7 @@ extension PublishPacket: ControlPacket {
         if qos == 1 || qos == 2 {
             buffer.append(encodeUInt16T(identifier))
         }
-        header.remainingLength = UInt8(buffer.count + payload.count)
+        header.remainingLength = encodeLength(buffer.count + payload.count)
         
         var packet = header.pack()
         packet.append(buffer)

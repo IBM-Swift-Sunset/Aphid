@@ -27,21 +27,21 @@ let PacketNames : [UInt8:String] = [
 ]
 
 enum ControlCode : Byte {
-    case connect    = 0x01
-    case connack    = 0x02
-    case publish    = 0x03
-    case puback     = 0x04
-    case pubrec     = 0x05
-    case pubrel     = 0x06
-    case pubcomp    = 0x07
-    case subscribe  = 0x08
-    case suback     = 0x09
-    case unsubscribe = 0x0a
-    case unsuback   = 0x0b
-    case pingreq    = 0x0c
-    case pingresp   = 0x0d
-    case disconnect = 0x0e
-    case reserved   = 0x0f
+    case connect    = 0x10
+    case connack    = 0x20
+    case publish    = 0x30 // special case
+    case puback     = 0x40
+    case pubrec     = 0x50
+    case pubrel     = 0x62
+    case pubcomp    = 0x70
+    case subscribe  = 0x82
+    case suback     = 0x90
+    case unsubscribe = 0xa2
+    case unsuback   = 0xb0
+    case pingreq    = 0xc0
+    case pingresp   = 0xd0
+    case disconnect = 0xe0
+    case reserved   = 0xf0
 }
 let Connect: UInt8  = 1
 let Connack: UInt8  = 2
@@ -63,25 +63,29 @@ struct Details {
     var messageID: UInt16
 }
 struct FixedHeader {
-    let messageType: ControlCode
+    let messageType: Byte
     var dup: Bool
     var qos: UInt16
     var retain: Bool
-    var remainingLength: UInt8
+    var remainingLength: [Byte]
     
     init(messageType: ControlCode) {
-        self.messageType = messageType
-        self.dup = false
-        self.qos = 0x00
-        self.retain = false
-        self.remainingLength = 1
+        self.messageType = UInt8(messageType.rawValue & 0xF0) >> 4
+        dup = decodebit(messageType.rawValue & 0x08 >> 3)
+        qos = UInt16(messageType.rawValue & 0x06 >> 1)
+        retain = decodebit(messageType.rawValue & 0x01)
+        remainingLength = [0x00]
     }
     
     func pack() -> Data {
         var data = Data()
-        data.append(encodeUInt8(messageType.rawValue << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[0] >> 7) << 2 |
+        data.append(encodeUInt8(messageType << 4 | encodeBit(dup) << 3 | (encodeUInt16(qos)[0] >> 7) << 2 |
                          (encodeUInt16(qos)[1] >> 7) << 1 | encodeBit(dup)))
-        data.append(encodeUInt8(remainingLength))
+
+        for byte in remainingLength {
+            data.append(encodeUInt8(byte))
+        }
+        
         return data
     }
 }
