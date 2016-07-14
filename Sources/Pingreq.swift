@@ -12,8 +12,8 @@ import Socket
 
 class PingreqPacket {
     let header: FixedHeader
-    
-    init(header: FixedHeader){
+
+    init(header: FixedHeader) {
         self.header = header
     }
 }
@@ -23,10 +23,10 @@ extension PingreqPacket: ControlPacket {
         let packet = header.pack()
         try writer.write(from: packet)
     }
-    
+
     func unpack(reader: SocketReader) {
     }
-    
+
     func validate() -> ErrorCodes {
         return .accepted
     }

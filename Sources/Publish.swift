@@ -17,10 +17,10 @@ class PublishPacket {
     var topicName: String
     var identifier: UInt16
     var payload: [String]
-    
+
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
          topicName: String, packetIdentifier: UInt16, payload: [String] = []) {
-        
+
         var header = header
         header.dup = dup
         header.qos = qos.rawValue
@@ -41,21 +41,21 @@ extension PublishPacket: ControlPacket {
         guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
-        
+
         buffer.append(topicName.data)
 
         if qos.rawValue > 0 {
             buffer.append(identifier.data)
         }
-        
+
         for item in payload {
             buffer.append(item.data)
         }
         header.remainingLength = buffer.count + payload.count //payload count cant be pstring
-        
+
         var packet = header.pack()
         packet.append(buffer)
-        
+
         do {
             try writer.write(from: packet)
 
@@ -63,7 +63,7 @@ extension PublishPacket: ControlPacket {
             throw NSError()
 
         }
-        
+
     }
 
     func unpack(reader: SocketReader) {
@@ -80,7 +80,7 @@ extension PublishPacket: ControlPacket {
         for _ in 0..<payloadSize {
             payload.append(decodeString(reader))
         }
-        
+
     }
 
     func validate() -> ErrorCodes {

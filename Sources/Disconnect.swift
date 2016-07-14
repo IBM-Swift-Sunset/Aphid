@@ -11,8 +11,8 @@ import Socket
 
 class DisconnectPacket {
     let header: FixedHeader
-    
-    init(header: FixedHeader){
+
+    init(header: FixedHeader) {
         self.header = header
     }
 }

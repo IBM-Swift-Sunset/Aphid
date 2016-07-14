@@ -9,7 +9,7 @@
 import Foundation
 import Socket
 
-let PacketNames : [UInt8:String] = [
+let PacketNames: [UInt8:String] = [
     1: "CONNECT",
     2: "CONNACK",
     3: "PUBLISH",
@@ -26,7 +26,7 @@ let PacketNames : [UInt8:String] = [
     14: "DISCONNECT"
 ]
 
-enum ControlCode : Byte {
+enum ControlCode: Byte {
     case connect    = 0x10
     case connack    = 0x20
     case publish    = 0x30 // special case
@@ -47,7 +47,7 @@ let Connect: UInt8  = 1
 let Connack: UInt8  = 2
 let Publish  = 3
 
-enum ErrorCodes : Byte {
+enum ErrorCodes: Byte {
     case accepted                       = 0x00
     case errRefusedBadProtocolVersion   = 0x01
     case errRefusedIDRejected           = 0x02
@@ -68,7 +68,7 @@ struct FixedHeader {
     var qos: Byte
     var retain: Bool
     var remainingLength: Int
-    
+
     init(messageType: ControlCode) {
         self.messageType = UInt8(messageType.rawValue & 0xF0) >> 4
         dup = (messageType.rawValue & 0x08 >> 3).bool
@@ -76,7 +76,7 @@ struct FixedHeader {
         retain = (messageType.rawValue & 0x01).bool
         remainingLength = 0
     }
-    
+
     func pack() -> Data {
         var data = Data()
         data.append((messageType << 4 | dup.toByte << 3 | qos << 1 | retain.toByte).data)
@@ -84,17 +84,17 @@ struct FixedHeader {
         for byte in encodeLength(remainingLength) {
             data.append(encodeUInt8(byte))
         }
-        
+
         return data
     }
 }
 
 extension FixedHeader: CustomStringConvertible {
-    
+
     var description: String {
         return "\(messageType): dup: \(dup) qos: \(qos)"
     }
-    
+
 }
 
 extension Aphid {
@@ -146,12 +146,12 @@ extension String {
     var data: Data {
         get {
             var array = Data()
-            
+
             let utf = self.data(using: String.Encoding.utf8)!
-            
+
             array.append(UInt16(utf.count).data)
             array.append(utf)
-            
+
             return array
         }
     }
@@ -160,7 +160,7 @@ extension UInt8 {
     var data: Data {
         return Data(bytes: [self])
     }
-    
+
     var bool: Bool {
         return self == 0x01 ? true : false
     }
@@ -187,12 +187,12 @@ extension UInt16 {
 }
 func encodeString(str: String) -> Data {
     var array = Data()
-    
+
     let utf = str.data(using: String.Encoding.utf8)!
-    
+
     array.append(encodeUInt16ToData(UInt16(utf.count)))
     array.append(utf)
-    
+
     return array
 }
 func encodeBit(_ bool: Bool) -> Byte {
@@ -232,7 +232,7 @@ func encodeUInt8(_ value: UInt8) -> Data {
 func getBytes(_ value: Data) {
     value.enumerateBytes() {
         buffer, byteIndex, stop in
-        
+
         print(buffer.first!)
         if byteIndex == value.count {
             stop = true
@@ -265,7 +265,7 @@ func decodeString(_ reader: SocketReader) -> String {
     do {
        let _ = try reader.read(into: field!)
     } catch {
-        
+
     }
     return String(field)
 }
@@ -274,7 +274,7 @@ func decodeUInt8(_ reader: SocketReader) -> UInt8 {
     do {
         let _ = try reader.read(into: num!)
     } catch {
-        
+
     }
     return decode(num!)
 }
@@ -283,7 +283,7 @@ func decodeUInt16(_ reader: SocketReader) -> UInt16 {
     do {
         let _ = try reader.read(into: uint!)
     } catch {
-        
+
     }
     return decode(uint!)
 }
