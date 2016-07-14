@@ -11,12 +11,12 @@ import Socket
 
 class UnsubscribePacket {
     var header: FixedHeader
-    var messageID: UInt16
+    var packetId: UInt16
     var topics: [String]
     
-    init(header: FixedHeader, messageID: UInt16, topics: [String]) {
+    init(header: FixedHeader, packetId: UInt16, topics: [String]) {
         self.header = header
-        self.messageID = messageID
+        self.packetId = packetId
         self.topics = topics
     }
 }
@@ -28,7 +28,7 @@ extension UnsubscribePacket : ControlPacket {
             throw NSError()
         }
         
-        buffer.append(encodeUInt16ToData(messageID))
+        buffer.append(packetId.data)
         
         for i in 0..<topics.count {
             buffer.append(encodeString(str: topics[i]))

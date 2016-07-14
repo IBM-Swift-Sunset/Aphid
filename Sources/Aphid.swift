@@ -49,14 +49,15 @@ public class Aphid {
     
     var socket: Socket?
 
-    var attributes = Attributes(options: ClientOptions(), status: ConnectionStatus())
+    var attributes = Attributes(options: ClientOptions(clientId: "aaron"), status: ConnectionStatus())
     
-    init(clientId: String, username: String? = nil, password: String? = nil) {
+    init(clientId: String, username: String? = nil, password: String? = nil, host: String = "localhost", port: Int32 = 1883) {
         self.clientId = clientId
         self.username = username
         self.password = password
     }
     
+    // Initial Connect
     public func connect() throws -> Bool {
         
         socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
@@ -67,31 +68,34 @@ public class Aphid {
             throw NSError()
         }
         
-        try sock.setBlocking(mode: true)
-        
+        try sock.setBlocking(mode: false)
+
         try sock.connect(to: host, port: port)
     
         try connectPacket.write(writer: sock)
         
-        /*let incomingData = NSMutableData(capacity: 5192)
-        let incomingLength = try sock.read(into: incomingData!)
-        print(incomingData!.length, incomingLength)*/
+        //let packet = ConnackPacket(reader: sock)?.validate()
+        //print(packet)
 
-        let _ = parseConnack(reader: sock)
-
+        return true
+    }
+    
+    // Reconnect
+    func reconnect() -> Bool {
         return true
     }
 
     func isConnected() -> Bool {
         if attributes.status == connected {
             return true
-        } else if attributes.options.AutoReconnect && attributes.status == disconnected {
+        } else if attributes.options.autoReconnect && attributes.status == disconnected {
             return true
         }
         else {
             return false
         }
     }
+
     func disconnect(uint: UInt) throws {
         guard !isConnected() else {
             NSLog("Already Disconnected")
@@ -109,6 +113,7 @@ public class Aphid {
         
         
     }
+
     func publish(topic: String, withString string: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
         
         guard let sock = socket,
@@ -126,13 +131,14 @@ public class Aphid {
             return 0
         }
     }
+
     func publish(message: String) -> UInt16 {
         guard let sock = socket,
-                  publishPacket = newControlPacket(packetType: .publish, topicName: message, packetId: 1) else {
+                  publishPacket = newControlPacket(packetType: .publish, topicName: message, packetId: 77) else {
                 
                 return 0
         }
-        print("connected?", sock.isConnected, "active?", sock.isActive)
+
         do {
             try publishPacket.write(writer: sock)
             let data = NSMutableData(capacity: 150)
@@ -146,14 +152,14 @@ public class Aphid {
         }
     }
 
-    func subscribe(topic: String, qos: String) -> UInt16 {
+    func subscribe(topic: [String], qoss: [qosType]) -> UInt16 {
 
         guard let sock = socket,
-            subscribePacket = newControlPacket(packetType: .subscribe) else {
+            subscribePacket = newControlPacket(packetType: .subscribe, packetId: 15, topics: topic, qoss: qoss) else {
         
                 return 0
         }
-        
+
         do {
             try subscribePacket.write(writer: sock)
             return 1
@@ -167,7 +173,7 @@ public class Aphid {
     func unsubscribe(topic: String) -> UInt16 {
 
         guard let sock = socket,
-            unsubscribePacket = newControlPacket(packetType: .unsubscribe) else {
+            unsubscribePacket = newControlPacket(packetType: .unsubscribe, packetId: 12, topics: [topic]) else {
                 
                 return 0
         }
@@ -183,7 +189,16 @@ public class Aphid {
     }
 
     func ping() {
+        guard let sock = socket,
+              let pingreqPacket = newControlPacket(packetType: .pingreq) else {
+            return
+        }
         
+        do {
+            try pingreqPacket.write(writer: sock)
+        } catch {
+            return 
+        }
     }
 }
 

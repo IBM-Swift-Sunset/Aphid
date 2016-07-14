@@ -19,7 +19,7 @@ class PublishPacket {
     var payload: [String]
     
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
-         topicName: String, packetIdentifier: UInt16, payload: [String] = []) {
+         topicName: String, packetId: UInt16, payload: [String] = []) {
         
         var header = header
         header.dup = dup
@@ -31,7 +31,7 @@ class PublishPacket {
         self.qos = qos
         self.willRetain = willRetain
         self.topicName = topicName
-        self.identifier = packetIdentifier
+        self.identifier = packetId
         self.payload = payload
     }
 }

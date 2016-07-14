@@ -51,17 +51,17 @@ enum ErrorCodes : Byte {
     case accepted                       = 0x00
     case errRefusedBadProtocolVersion   = 0x01
     case errRefusedIDRejected           = 0x02
-    case error                          = 0x03
+    case errServerUnavailable           = 0x03
+    case errBadUsernameOrPassword       = 0x04
+    case errNotAuthorize                = 0x05
+    case errUnknown                     = 0x06
 }
 enum qosType: Byte {
     case atMostOnce = 0 // At Most One Delivery
     case atLeastOnce = 1 // At Least Deliver Once
     case exactlyOnce = 2 // Deliver Exactly Once
 }
-struct Details {
-    var qos: Byte
-    var messageID: UInt16
-}
+
 struct FixedHeader {
     let messageType: Byte
     var dup: Bool
@@ -75,14 +75,15 @@ struct FixedHeader {
         qos = messageType.rawValue & 0x06 >> 1
         retain = (messageType.rawValue & 0x01).bool
         remainingLength = 0
+        print(description)
     }
-    
+
     func pack() -> Data {
         var data = Data()
         data.append((messageType << 4 | dup.toByte << 3 | qos << 1 | retain.toByte).data)
 
         for byte in encodeLength(remainingLength) {
-            data.append(encodeUInt8(byte))
+            data.append(byte.data)
         }
         
         return data
@@ -92,40 +93,41 @@ struct FixedHeader {
 extension FixedHeader: CustomStringConvertible {
     
     var description: String {
-        return "\(messageType): dup: \(dup) qos: \(qos)"
+        return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain)"
     }
     
 }
 
 extension Aphid {
-    func newControlPacket(packetType: ControlCode, topicName: String? = nil, packetId: UInt16? = nil ) -> ControlPacket? {
+    func newControlPacket(packetType: ControlCode, topicName: String? = nil, packetId: UInt16? = nil,
+                          topics: [String]? = nil, qoss: [qosType]? = nil ) -> ControlPacket? {
         switch packetType {
         case .connect:
             return ConnectPacket(header: FixedHeader(messageType: .connect), clientId: clientId )
         case .connack:
             return ConnackPacket(header: FixedHeader(messageType: .connack))
         case .publish:
-            return PublishPacket(header: FixedHeader(messageType: .publish), topicName: topicName!, packetIdentifier: packetId!)
+            return PublishPacket(header: FixedHeader(messageType: .publish), topicName: topicName!, packetId: packetId!)
         case .puback:
-            return PublishPacket(header: FixedHeader(messageType: .puback), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .pubrec:
-            return PublishPacket(header: FixedHeader(messageType: .pubrec), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .pubrel:
-            return PublishPacket(header: FixedHeader(messageType: .pubrel), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .pubcomp:
-            return PublishPacket(header: FixedHeader(messageType: .pubcomp), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .subscribe:
-            return SubscribePacket(header: FixedHeader(messageType: .subscribe), messageID: 0, topics: [String](), qoss: [Byte]())// Wrong
+            return SubscribePacket(header: FixedHeader(messageType: .subscribe), packetId: packetId!, topics: topics!, qoss: qoss!)// Wrong
         case .suback:
-            return PublishPacket(header: FixedHeader(messageType: .suback), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .unsubscribe:
-            return UnsubscribePacket(header: FixedHeader(messageType: .unsubscribe), messageID: 0x00, topics: [String]()) // Wrong
+            return UnsubscribePacket(header: FixedHeader(messageType: .unsubscribe), packetId: packetId!, topics: topics!) // Wrong
         case .unsuback:
-            return PublishPacket(header: FixedHeader(messageType: .unsuback), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .pingreq:
             return PingreqPacket(header: FixedHeader(messageType: .pingreq))
         case .pingresp:
-            return PublishPacket(header: FixedHeader(messageType: .pingresp), topicName: "Test", packetIdentifier: 0x00) // Wrong
+            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .disconnect:
             return DisconnectPacket(header: FixedHeader(messageType: .disconnect))
         default:

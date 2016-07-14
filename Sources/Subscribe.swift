@@ -11,13 +11,13 @@ import Socket
 
 class SubscribePacket {
     var header: FixedHeader //bits 3,2,1,0 --> 0,0,1 and 0 respectively
-    var messageID: UInt16
+    var packetId: UInt16
     var topics: [String]
-    var qoss: [Byte]
+    var qoss: [qosType]
     
-    init(header: FixedHeader, messageID: UInt16, topics: [String], qoss: [Byte]){
+    init(header: FixedHeader, packetId: UInt16, topics: [String], qoss: [qosType]){
         self.header = header
-        self.messageID = messageID
+        self.packetId = packetId
         self.topics = topics
         self.qoss = qoss
         
@@ -31,14 +31,15 @@ extension SubscribePacket : ControlPacket {
             throw NSError()
         }
         
-        buffer.append(encodeUInt16ToData(messageID))
+        buffer.append(packetId.data)
         
         for (topic, qos) in zip(topics, qoss) {
-            buffer.append(encodeString(str: topic))
-            buffer.append(encodeUInt8(qos))
+            buffer.append(topic.data)
+            buffer.append(qos.rawValue.data)
         }
         
         header.remainingLength = buffer.count
+
         var packet = header.pack()
         packet.append(buffer)
 
@@ -52,7 +53,13 @@ extension SubscribePacket : ControlPacket {
         
     }
     func unpack(reader: SocketReader) {
-        
+        self.packetId = decodeUInt16(reader)
+        var topics = [String]()
+        var qoss = [qosType]()
+        for _ in 0...10 {
+            topics.append(decodeString(reader))
+            qoss.append(qosType(rawValue: decodeUInt8(reader))!)
+        }
     }
     func validate() -> ErrorCodes {
         return .accepted

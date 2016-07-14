@@ -12,9 +12,6 @@ import Socket
 class ConnackPacket {
     var header: FixedHeader
     var flags: Byte
-    // ----------- //
-    // 0 - Accepted | 1 - Unacceptable Protocol | 2 - Identifier Invalid | 3  - Server Unavailable
-    // 4 - Bad Username/Password | 5 - Not Authorized
     var responseCode: Byte
     
     init(header: FixedHeader) {
@@ -65,9 +62,20 @@ extension ConnackPacket: ControlPacket {
         responseCode = decodeUInt8(reader)
     }
     func validate() -> ErrorCodes {
-        return .accepted
-    }
+        // ------ Response Codes ----- //
+        // 0 - Accepted | 1 - Unacceptable Protocol | 2 - Identifier Invalid | 3  - Server Unavailable
+        // 4 - Bad Username/Password | 5 - Not Authorized
 
+        switch responseCode {
+        case 0: return .accepted
+        case 1: return .errRefusedBadProtocolVersion
+        case 2: return .errRefusedIDRejected
+        case 3: return .errServerUnavailable
+        case 4: return .errBadUsernameOrPassword
+        case 5: return .errNotAuthorize
+        default: return .errUnknown
+        }
+    }
 }
 func parseConnack(reader: SocketReader) {
     let code = decodeUInt8(reader)

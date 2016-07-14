@@ -10,7 +10,10 @@ class AphidTests: XCTestCase {
         
         do {
             print(try aphid.connect())
-            let _ = aphid.publish(message: "hello")
+            print(aphid.publish(message: "a/b"))
+            aphid.ping()
+            print(aphid.subscribe(topic: ["a/b","c/d"], qoss: [.atLeastOnce,.exactlyOnce]))
+            print(aphid.unsubscribe(topic: "a/b"))
         } catch {
             
         }
@@ -21,10 +24,8 @@ class AphidTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct results.
         print("////// Test Publish //////")
         let aphid = Aphid(clientId: "tester")
-        
         do {
-            print(try aphid.connect())
-            //print(aphid.publish(message: "hello"))
+            print(aphid.publish(message: "hello"))
             
         } catch {
             
