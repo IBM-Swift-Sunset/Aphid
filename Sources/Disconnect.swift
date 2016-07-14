@@ -10,21 +10,22 @@ import Foundation
 import Socket
 
 class DisconnectPacket {
-    let fixedHeader: FixedHeader
+    let header: FixedHeader
     
-    init(fixedHeader: FixedHeader){
-        self.fixedHeader = fixedHeader
+    init(header: FixedHeader){
+        self.header = header
     }
 }
 
 extension DisconnectPacket: ControlPacket {
     func write(writer: SocketWriter) throws {
-        let packet = self.fixedHeader.pack()
+        let packet = header.pack()
         try writer.write(from: packet)
     }
-    func unpack(reader: SocketReader) {
 
+    func unpack(reader: SocketReader) {
     }
+
     func validate() -> ErrorCodes {
         return .accepted
     }

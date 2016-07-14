@@ -10,12 +10,12 @@ import Foundation
 import Socket
 
 class UnsubscribePacket {
-    var fixedHeader: FixedHeader
+    var header: FixedHeader
     var messageID: UInt16
     var topics: [String]
     
-    init(fixedHeader: FixedHeader, messageID: UInt16, topics: [String]) {
-        self.fixedHeader = fixedHeader
+    init(header: FixedHeader, messageID: UInt16, topics: [String]) {
+        self.header = header
         self.messageID = messageID
         self.topics = topics
     }
@@ -28,15 +28,14 @@ extension UnsubscribePacket : ControlPacket {
             throw NSError()
         }
         
-        //buffer.append(fixed)
-        buffer.append(encodeUInt16(messageID))
+        buffer.append(encodeUInt16T(messageID))
         
         for i in 0..<topics.count {
             buffer.append(encodeString(str: topics[i]))
         }
         
-        fixedHeader.remainingLength = UInt8(buffer.length)
-        let packet = fixedHeader.pack()
+        header.remainingLength = UInt8(buffer.length)
+        let _ = header.pack()
         
         do {
             try writer.write(from: buffer)

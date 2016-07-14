@@ -11,15 +11,15 @@ import Foundation
 struct ClientOptions  {
 	var Servers:                 [NSURL]
 	var ClientID:                String
-	var Username:                String
-	var Password:                String
+	var Username:                String?
+	var Password:                String?
 	var CleanSession:            Bool
 	var Order:                   Bool
 	var WillEnabled:             Bool
-	var WillTopic:               String
+	var WillTopic:               String?
 	var WillPayload:             [Byte]
 	var WillQos:                 Byte
-	var WillRetained:            Bool
+	var WillRetain:              Bool
 	var ProtocolVersion:         UInt
 	var protocolVersionExplicit: Bool
 	//var TLSConfig:               tls.Config
@@ -46,7 +46,7 @@ struct ClientOptions  {
         WillTopic = ""
         WillPayload = [Byte]()
         WillQos = 0
-        WillRetained = false
+        WillRetain = false
         ProtocolVersion = 0
         protocolVersionExplicit = false
         //TLSConfig = tls.Config{}

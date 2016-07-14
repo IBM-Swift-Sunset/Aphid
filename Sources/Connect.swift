@@ -19,43 +19,41 @@ protocol ControlPacket {
 
 class ConnectPacket {
     
-    var fixedHeader: FixedHeader
+    var header: FixedHeader
     var protocolName: String
     var protocolVersion: UInt8
     var cleanSession: Bool
     var willFlag: Bool
-    var willQoS: UInt8
+    var willQoS: qosType
     var willRetain: Bool
     var usernameFlag: Bool
     var passwordFlag: Bool
     var reservedBit: Bool
-    var keepAliveTimer: UInt16
-    let clientOptions: ClientOptions
-    var clientIdentifier: String
+    var keepAlive: UInt16
+    var clientId: String
     var willTopic: String?
     var willMessage: String?
     var username: String?
     var password: String?
     
-    init(fixedHeader: FixedHeader,
+    init(header: FixedHeader,
          protocolName: String = "MQTT",
          protocolVersion: UInt8 = 4,
          cleanSession: Bool = true,
-         willFlag: Bool = true,
-         willQoS: UInt8 = 10,
-         willRetain: Bool = true,
+         willFlag: Bool = false,
+         willQoS: qosType = .atMostOnce,
+         willRetain: Bool = false,
          usernameFlag: Bool = false,
          passwordFlag: Bool = false,
          reservedBit: Bool = false,
-         keepAliveTimer: UInt16 = 30,
-         clientOptions: ClientOptions,
-         clientIdentifier: String,
+         keepAlive: UInt16 = 10,
+         clientId: String,
          willTopic: String? = nil,
          willMessage: String? = nil,
          username: String? = nil,
          password: String? = nil){
         
-        self.fixedHeader = fixedHeader
+        self.header = header
         self.protocolName = protocolName
         self.protocolVersion = protocolVersion
         self.cleanSession = cleanSession
@@ -65,9 +63,8 @@ class ConnectPacket {
         self.usernameFlag = usernameFlag
         self.passwordFlag = passwordFlag
         self.reservedBit = reservedBit
-        self.keepAliveTimer = keepAliveTimer
-        self.clientOptions = clientOptions
-        self.clientIdentifier = clientIdentifier
+        self.keepAlive = keepAlive
+        self.clientId = clientId
         self.willTopic = willTopic
         self.willMessage = willMessage
         self.username = username
@@ -79,19 +76,17 @@ extension ConnectPacket : ControlPacket {
     
     func write(writer: SocketWriter) throws {
         
-        guard let buffer = NSMutableData(capacity: 512) else {
+        guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
-        
+
         buffer.append( encodeString(str: protocolName))
-        buffer.append( encode(protocolVersion) )
-        buffer.append( encode(encodeBit(cleanSession) << 1 | encodeBit(willFlag) << 2 | (willQoS >> 1) << 3 | willQoS << 3 |
-                       encodeBit(willRetain) << 5 | encodeBit(passwordFlag) << 6 | encodeBit(usernameFlag) << 7))
-        buffer.append( encode(keepAliveTimer))
-        
+        buffer.append( encodeUInt8(protocolVersion) )
+        buffer.append( encodeUInt8(encodeBit(cleanSession) << 1 | encodeBit(willFlag) << 2 | (willQoS.rawValue >> 1) << 3 | willQoS.rawValue << 3 | encodeBit(willRetain) << 5 | encodeBit(passwordFlag) << 6 | encodeBit(usernameFlag) << 7))
+        buffer.append( encodeUInt16T(keepAlive))
+
         //Begin Payload
-        buffer.append( encodeString(str: clientIdentifier))
-        
+        buffer.append( encodeString(str: clientId))
         if willFlag {
             buffer.append( encodeString(str: willTopic!))
             buffer.append( encodeString(str: willMessage!))
@@ -102,14 +97,15 @@ extension ConnectPacket : ControlPacket {
         if passwordFlag {
              buffer.append( encodeString(str: password!))
         }
+
+        header.remainingLength = encodeLength(buffer.count)[0]//16 // UInt8(encodeLength(buffer.count).count)
         
-        fixedHeader.remainingLength = UInt8(encodeLength(buffer.length).count)
-        let packet = fixedHeader.pack()
+        var packet = header.pack()
         packet.append(buffer)
         
         do {
             try writer.write(from: packet)
-
+        
         } catch {
             throw error
             
@@ -118,42 +114,34 @@ extension ConnectPacket : ControlPacket {
     }
     
     func unpack(reader: SocketReader) {
+        self.protocolName = decodeString(reader)
+        self.protocolVersion = decodeUInt8(reader)
+        let options = decodeUInt8(reader)
+        
+        self.reservedBit  = decodebit(1 & options)
+        self.cleanSession = decodebit(1 & (options >> 1))
+        self.willFlag     = decodebit(1 & (options >> 2))
+        self.willQoS      = qosType(rawValue: 3 & (options >> 3))!
+        self.willRetain   = decodebit(1 & (options >> 5))
+        self.usernameFlag = decodebit(1 & (options >> 6))
+        self.passwordFlag = decodebit(1 & (options >> 7))
+        
+        self.keepAlive = decodeUInt16(reader)
 
-       do {
-            let data = NSMutableData()
-            let _ = try reader.read(into: data)
-
-            self.protocolName = decodeString(reader)
-            self.protocolVersion = decodeUInt8(reader)
-            let options = decodeUInt8(reader)
-            
-            self.reservedBit  = decodebit(1 & options)
-            self.cleanSession = decodebit(1 & (options >> 1))
-            self.willFlag     = decodebit(1 & (options >> 2))
-            self.willQoS      = 3 & (options >> 3)
-            self.willRetain   = decodebit(1 & (options >> 5))
-            self.usernameFlag = decodebit(1 & (options >> 6))
-            self.passwordFlag = decodebit(1 & (options >> 7))
-            
-            self.keepAliveTimer = decodeUInt16(reader)
-
-            //Payload
-            self.clientIdentifier = decodeString(reader)
-            
-            if willFlag {
-                self.willTopic = decodeString(reader)
-                self.willMessage = decodeString(reader)
-            }
-            if usernameFlag {
-                self.username = decodeString(reader)
-            }
-            if passwordFlag {
-                self.password = decodeString(reader)
-            }
-
-        } catch {
-            print(error)
+        //Payload
+        self.clientId = decodeString(reader)
+        
+        if willFlag {
+            self.willTopic = decodeString(reader)
+            self.willMessage = decodeString(reader)
         }
+        if usernameFlag {
+            self.username = decodeString(reader)
+        }
+        if passwordFlag {
+            self.password = decodeString(reader)
+        }
+
     }
     
     func validate() -> ErrorCodes {
@@ -172,9 +160,9 @@ extension ConnectPacket : ControlPacket {
             //Bad protocol name
             return .errRefusedBadProtocolVersion
         }
-        if clientIdentifier.lengthOfBytes(using: NSUTF8StringEncoding) > 65535 ||
-                  username?.lengthOfBytes(using: NSUTF8StringEncoding) > 65535 ||
-                  password?.lengthOfBytes(using: NSUTF8StringEncoding) > 65535 {
+        if clientId.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
+          username?.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
+          password?.lengthOfBytes(using: String.Encoding.utf8) > 65535 {
             //Bad size field
            return .errRefusedBadProtocolVersion
         }

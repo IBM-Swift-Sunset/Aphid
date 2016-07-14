@@ -10,16 +10,16 @@ import Foundation
 import Socket
 
 class SubscribePacket {
-    var fixedHeader: FixedHeader
+    var header: FixedHeader //bits 3,2,1,0 --> 0,0,1 and 0 respectively
     var messageID: UInt16
     var topics: [String]
-    var QoSs: [Byte]
+    var qoss: [Byte]
     
-    init(fixedHeader: FixedHeader, messageID: UInt16, topics: [String], QoSs: [Byte]){
-        self.fixedHeader = fixedHeader
+    init(header: FixedHeader, messageID: UInt16, topics: [String], qoss: [Byte]){
+        self.header = header
         self.messageID = messageID
         self.topics = topics
-        self.QoSs = QoSs
+        self.qoss = qoss
         
     }
 }
@@ -27,15 +27,26 @@ class SubscribePacket {
 extension SubscribePacket : ControlPacket {
     
     func write(writer: SocketWriter) throws {
-        guard let buffer = NSMutableData(capacity: 512) else {
+       guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
         
-        buffer.append(encodeUInt16(messageID))
+        buffer.append(encodeUInt16T(messageID))
         
-        for i in 0..<topics.count {
-            buffer.append(encodeString(str: topics[i]))
-            buffer.append(encode(QoSs[i]))
+        for (topic, qos) in zip(topics, qoss) {
+            buffer.append(encodeString(str: topic))
+            buffer.append(encodeUInt8(qos))
+        }
+        
+        var packet = header.pack()
+        packet.append(buffer)
+
+        do {
+            try writer.write(from: packet)
+
+        } catch {
+            throw NSError()
+
         }
         
     }

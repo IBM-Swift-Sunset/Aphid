@@ -10,31 +10,50 @@ import Foundation
 import Socket
 
 class PublishPacket {
-    let fixedHeader: FixedHeader
+    var header: FixedHeader
     let dupFlag: Bool
-    let QoS: UInt16
+    let qos: UInt16
     let willRetain: Bool
     let topicName: String
-    let packetIdentifier: UInt16
-    let payload: [String]? //??
+    let identifier: UInt16
+    let payload: [String]
     
-    init(fixedHeader: FixedHeader, dupFlag: Bool = false, QoS: UInt16 = 0x0010, willRetain: Bool = false, t
-         topicName: String, packetIdentifier: UInt16, payload: [String]? = nil) {
-        self.fixedHeader = fixedHeader
+    init(header: FixedHeader, dupFlag: Bool = false, qos: UInt16 = 0x0010, willRetain: Bool = false,
+         topicName: String, packetIdentifier: UInt16, payload: [String] = []) {
+        self.header = header
         self.dupFlag = dupFlag
-        self.QoS = QoS
+        self.qos = qos
         self.willRetain = willRetain
         self.topicName = topicName
-        self.packetIdentifier = packetIdentifier
+        self.identifier = packetIdentifier
         self.payload = payload
     }
 }
 
 extension PublishPacket: ControlPacket {
     func write(writer: SocketWriter) throws {
-        //throw
+        guard var buffer = Data(capacity: 512) else {
+            throw NSError()
+        }
+        
+        buffer.append(encodeString(str: topicName))
+        if qos == 1 || qos == 2 {
+            buffer.append(encodeUInt16T(identifier))
+        }
+        header.remainingLength = UInt8(buffer.count + payload.count)
+        
+        var packet = header.pack()
+        packet.append(buffer)
+        
+        do {
+            try writer.write(from: packet)
+        } catch {
+            throw NSError()
+        }
+        
     }
     func unpack(reader: SocketReader) {
+        let topic = decodeString(reader)
         
     }
     func validate() -> ErrorCodes {

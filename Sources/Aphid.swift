@@ -15,16 +15,11 @@ public func ==(lhs: ConnectionStatus, rhs: ConnectionStatus) -> Bool {
 
 typealias Byte = UInt8
 
-public protocol AphidAPI {
-    func isConnected() -> Bool
-    func connect() -> Token
-    func disconnect(uint: UInt)
-    func publish(topic: String, byte: UInt8, isRetained: Bool) -> Token
-    func subscribe(topic: String, byte: UInt8, callback: (String)) -> Token //MessageHandler
-    func subscribeMultiple() -> Token
-    func unsubscribe(topics: [String]) -> Token
+enum ControlPacketType: UInt8 {
+    case connect = 0x10
+    case publish = 0x03
+    case pubAck  = 0x40
 }
-
 
 struct Attributes {
 /*    var conn:            net.Conn
@@ -45,23 +40,29 @@ struct Attributes {
 
 let disconnected = ConnectionStatus()
 let connected = ConnectionStatus()
+
 // Aphid
 public class Aphid {
     
-    var attributes: Attributes
+    var host = "localhost"
+    var port: Int32 = 1883
+    var clientId: String
+    var username: String?
+    var password: String?
+    var secureMQTT: Bool = false
+    var cleanSess: Bool = true
+    
+    var socket: Socket?
 
-    init() {
-        attributes = Attributes(options: ClientOptions(), status: disconnected)
-        
+    var attributes = Attributes(options: ClientOptions(), status: ConnectionStatus())
+    
+    init(clientId: String, username: String? = nil, password: String? = nil) {
+        self.clientId = clientId
+        self.username = username
+        self.password = password
     }
     
-    enum ControlPacketType: UInt8 {
-        case connect = 0x10
-        case publish = 0x03
-        case pubAck  = 0x40
-    }
-    
-    public func connect() throws {
+    public func connect() throws -> Bool {
     
         // Send Fixed header
         // 0 0 0 1 0 0 0 0
@@ -95,11 +96,15 @@ public class Aphid {
         
         // byte 10 keepalive (LSB)
         
-        let socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
-        try socket.setBlocking(mode: true)
+        socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
+        try socket?.setBlocking(mode: true)
         
-        try socket.connect(to: "localhost", port: 1883)
-        print(socket.isConnected)
+        try socket?.connect(to: host, port: port)
+        print(socket?.isConnected)
+        
+        guard let sock = socket else {
+            throw NSError()
+        }
         
         let buffer = NSMutableData(capacity: 512)
         let incomingData = NSMutableData(capacity: 5192)
@@ -108,16 +113,20 @@ public class Aphid {
             throw NSError()
         }
         
-        let controlPacket = FixedHeader(messageType: .connect)
-        var connectPacket = ConnectPacket(fixedHeader: controlPacket, keepAliveTimer: 1,  clientOptions: attributes.options, clientIdentifier: "test")
+        guard let connectPacket = newControlPacket(packetType: .connect) else {
+            throw NSError()
+        }
         
-        try connectPacket.write(writer: socket)
-        
-        let incomingLength = try socket.read(into: incomingData!)
-        
-        print(incomingLength)
-        
+        try connectPacket.write(writer: sock)
+
+        //let incomingLength = try socket.read(into: incomingData!)
+        print(incomingData!.length)
+
+        let _ = parseConnack(reader: sock)
+
+        return true
     }
+
     func isConnected() -> Bool {
         if attributes.status == connected {
             return true
@@ -128,28 +137,39 @@ public class Aphid {
             return false
         }
     }
-    func disconnect(uint: UInt){
+    func disconnect(uint: UInt) throws {
         guard !isConnected() else {
             NSLog("Already Disconnected")
             return
         }
         
-        self.attributes.status = disconnected
+        attributes.status = disconnected
+        
+        guard let disconnectPacket = newControlPacket(packetType: .disconnect) else {
+            throw NSError()
+        }
+        
+        guard let sock = socket else {
+            throw NSError()
+        }
+        try disconnectPacket.write(writer: sock)
         
         
     }
-    func publish(topic: String, byte: UInt8, isRetained: Bool) -> Token {
-        return Token()
+    func publish(topic: String, withString string: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
+        return 0
     }
-    func subscribe(topic: String, byte: UInt8, callback: (String)) -> Token { //MessageHandler
-        return Token()
+    func publish(message: String) -> UInt16 {
+        return 0
     }
-    func subscribeMultiple() -> Token {
-        return Token()
+    func subscribe(topic: String, qos: String) -> UInt16 {
+        return 0
     }
-    func unsubscribe(topics: [String]) -> Token {
-        return Token()
+    func unsubscribe(topic: String) -> UInt16 {
+        return 0
     }
-
+    func ping() {
+        
+    }
 }
 
