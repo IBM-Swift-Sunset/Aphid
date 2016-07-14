@@ -1,15 +1,16 @@
 //
-//  Disconnect.swift
+//  Pingresp.swift
 //  Aphid
 //
-//  Created by Aaron Liberatore on 7/11/16.
+//  Created by Joseph Yin on 7/14/16.
 //
 //
 
 import Foundation
 import Socket
 
-class DisconnectPacket {
+
+class PingrespPacket {
     let header: FixedHeader
 
     init(header: FixedHeader) {
@@ -17,7 +18,7 @@ class DisconnectPacket {
     }
 }
 
-extension DisconnectPacket: ControlPacket {
+extension PingrespPacket: ControlPacket {
     func write(writer: SocketWriter) throws {
         let packet = header.pack()
         try writer.write(from: packet)

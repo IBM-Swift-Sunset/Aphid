@@ -16,28 +16,29 @@ class SubscribePacket {
     var qoss: [qosType]
     
     init(header: FixedHeader, packetId: UInt16, topics: [String], qoss: [qosType]){
+
         self.header = header
         self.packetId = packetId
         self.topics = topics
         self.qoss = qoss
-        
+
     }
 }
 
 extension SubscribePacket : ControlPacket {
-    
+
     func write(writer: SocketWriter) throws {
        guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
         
         buffer.append(packetId.data)
-        
+
         for (topic, qos) in zip(topics, qoss) {
             buffer.append(topic.data)
             buffer.append(qos.rawValue.data)
         }
-        
+
         header.remainingLength = buffer.count
 
         var packet = header.pack()
@@ -50,7 +51,7 @@ extension SubscribePacket : ControlPacket {
             throw NSError()
 
         }
-        
+
     }
     func unpack(reader: SocketReader) {
         self.packetId = decodeUInt16(reader)
@@ -60,6 +61,7 @@ extension SubscribePacket : ControlPacket {
             topics.append(decodeString(reader))
             qoss.append(qosType(rawValue: decodeUInt8(reader))!)
         }
+
     }
     func validate() -> ErrorCodes {
         return .accepted

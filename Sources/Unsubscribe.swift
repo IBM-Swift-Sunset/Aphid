@@ -15,6 +15,7 @@ class UnsubscribePacket {
     var topics: [String]
     
     init(header: FixedHeader, packetId: UInt16, topics: [String]) {
+
         self.header = header
         self.packetId = packetId
         self.topics = topics
@@ -29,24 +30,24 @@ extension UnsubscribePacket : ControlPacket {
         }
         
         buffer.append(packetId.data)
-        
+
         for i in 0..<topics.count {
             buffer.append(encodeString(str: topics[i]))
         }
-        
+
         header.remainingLength = buffer.count
         let _ = header.pack()
-        
+
         do {
             try writer.write(from: buffer)
-            
+
         } catch {
             throw error
-            
+
         }
     }
     func unpack(reader: SocketReader) {
-        
+
     }
     func validate() -> ErrorCodes {
         return .accepted

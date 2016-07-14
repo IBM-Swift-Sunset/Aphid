@@ -11,14 +11,14 @@ import Foundation
 import Socket
 
 protocol ControlPacket {
-    
+
     func write(writer: SocketWriter) throws
     func unpack(reader: SocketReader)
     func validate() -> ErrorCodes
 }
 
 class ConnectPacket {
-    
+
     var header: FixedHeader
     var protocolName: String
     var protocolVersion: UInt8
@@ -35,7 +35,7 @@ class ConnectPacket {
     var willMessage: String?
     var username: String?
     var password: String?
-    
+
     init(header: FixedHeader,
          protocolName: String = "MQTT",
          protocolVersion: UInt8 = 4,
@@ -51,8 +51,8 @@ class ConnectPacket {
          willTopic: String? = nil,
          willMessage: String? = nil,
          username: String? = nil,
-         password: String? = nil){
-        
+         password: String? = nil) {
+
         self.header = header
         self.protocolName = protocolName
         self.protocolVersion = protocolVersion
@@ -73,9 +73,9 @@ class ConnectPacket {
 }
 
 extension ConnectPacket : ControlPacket {
-    
+
     func write(writer: SocketWriter) throws {
-        
+
         guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
@@ -99,25 +99,25 @@ extension ConnectPacket : ControlPacket {
         }
 
         header.remainingLength = buffer.count
-        
+
         var packet = header.pack()
         packet.append(buffer)
-        
+
         do {
             try writer.write(from: packet)
-        
+
         } catch {
             throw error
-            
+
         }
-        
+
     }
-    
+
     func unpack(reader: SocketReader) {
         self.protocolName = decodeString(reader)
         self.protocolVersion = decodeUInt8(reader)
         let options = decodeUInt8(reader)
-        
+
         self.reservedBit  = decodebit(1 & options)
         self.cleanSession = decodebit(1 & (options >> 1))
         self.willFlag     = decodebit(1 & (options >> 2))
@@ -125,12 +125,12 @@ extension ConnectPacket : ControlPacket {
         self.willRetain   = decodebit(1 & (options >> 5))
         self.usernameFlag = decodebit(1 & (options >> 6))
         self.passwordFlag = decodebit(1 & (options >> 7))
-        
+
         self.keepAlive = decodeUInt16(reader)
 
         //Payload
         self.clientId = decodeString(reader)
-        
+
         if willFlag {
             self.willTopic = decodeString(reader)
             self.willMessage = decodeString(reader)
@@ -143,7 +143,7 @@ extension ConnectPacket : ControlPacket {
         }
 
     }
-    
+
     func validate() -> ErrorCodes {
         if passwordFlag && !usernameFlag {
             return .errRefusedIDRejected

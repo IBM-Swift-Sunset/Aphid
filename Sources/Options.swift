@@ -29,6 +29,7 @@ struct ClientOptions  {
 	var connectTimeout:          UInt16
 	var maxReconnectInterval:    UInt16
 	var autoReconnect:           Bool
+
 	/*var Store:                   Store?
 	var DefaultPublishHander:    MessageHandler
 	var OnConnect:               OnConnectHandler?
@@ -62,7 +63,7 @@ struct ClientOptions  {
         messageChannelDepth = 100
         
     }
-    
+
     mutating func addBroker(server: String) {
         let brokerURI = server // url.Parse(server)
         servers.append(NSURL(string: brokerURI)!)
