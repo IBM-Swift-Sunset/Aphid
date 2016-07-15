@@ -283,6 +283,11 @@ extension UInt16 {
         }
         self = decode(uint!)
     }
+    init(random: Bool){
+        var r: UInt16 = 0
+        arc4random_buf(&r, sizeof(UInt16.self))
+        self = r
+    }
     
     init(msb: Byte, lsb: Byte) {
         self = (UInt16(msb) << 8) | UInt16(lsb)

@@ -22,7 +22,7 @@ class SubackPacket {
     
     init?(header: FixedHeader, bytes: [Byte]) {
         self.header = header
-        packetId = UInt16(msb: bytes[1], lsb: bytes[0])
+        packetId = UInt16(msb: bytes[0], lsb: bytes[1])
         returnCode = bytes[2]
     }
     
@@ -30,7 +30,7 @@ class SubackPacket {
 
 extension SubackPacket : ControlPacket {
     var description: String {
-        return header.description
+        return "\(header.description) | ID: \(packetId)"
     }
     func printPacket() {
         print("Pubcomp Packet Information")

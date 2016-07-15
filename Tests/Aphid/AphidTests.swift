@@ -14,19 +14,12 @@ class AphidTests: XCTestCase, MQTTDelegate {
         aphid.delegate = delegate
 
         do {
-            /*let _ = try aphid.connect()
-                guard let result = self.updated else {
-                    XCTFail("Expected delegate to be called")
-                    return
-                }
-                
-                XCTAssertTrue(result)*/
             let _ = try aphid.connect()
-            //let _ = aphid.loop()
-            //let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
+            let _ = aphid.loop()
+            let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
             let _ = aphid.ping()
-            //let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
-            //let _ = aphid.unsubscribe(topic: ["/basilplant/"])
+            let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
+            let _ = aphid.unsubscribe(topic: ["/basilplant/"])
             print("Executed all instruction")
         } catch {
      
@@ -37,8 +30,8 @@ class AphidTests: XCTestCase, MQTTDelegate {
         print("connection lost")
     }
     func deliveryComplete(token: String) {
-        print("delivery Complete")
-        updated = true
+        print(token)
+        
     }
     func messageArrived(topic: String, message: String) throws {
         print("Message Arrived")

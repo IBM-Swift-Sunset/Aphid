@@ -20,18 +20,13 @@ class PubackPacket {
 
     init?(header: FixedHeader, bytes: [Byte]) {
         self.header = header
-        packetId = UInt16(msb: bytes[1], lsb: bytes[0])
+        packetId = UInt16(msb: bytes[0], lsb: bytes[1])
     }
 }
 
 extension PubackPacket : ControlPacket {
     var description: String {
-        return header.description
-    }
-    func printPacket() {
-        print("Puback Packet Information")
-        print(header.messageType)
-        print(packetId)
+        return "\(header.description) | ID: \(packetId)"
     }
 
     func write(writer: SocketWriter) throws {

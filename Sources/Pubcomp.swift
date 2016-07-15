@@ -20,7 +20,7 @@ class PubcompPacket {
 
     init?(header: FixedHeader, bytes: [Byte]) {
         self.header = header
-        packetId = UInt16(msb: bytes[1], lsb: bytes[0])
+        packetId = UInt16(msb: bytes[0], lsb: bytes[1])
     }
 }
 

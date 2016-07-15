@@ -20,13 +20,13 @@ class UnSubackPacket {
     
     init?(header: FixedHeader, bytes: [Byte]) {
         self.header = header
-        packetId = UInt16(msb: bytes[1], lsb: bytes[0])
+        packetId = UInt16(msb: bytes[0], lsb: bytes[1])
     }
 }
 
 extension UnSubackPacket : ControlPacket {
     var description: String {
-        return header.description
+        return "\(header.description) | ID: \(packetId)"
     }
     func printPacket() {
         print("Pubcomp Packet Information")

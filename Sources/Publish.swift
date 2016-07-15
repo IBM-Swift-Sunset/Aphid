@@ -15,7 +15,7 @@ class PublishPacket {
     let qos: qosType
     let willRetain: Bool
     var topicName: String
-    var identifier: UInt16
+    var identifier: UInt16?
     var payload: [String]
 
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
@@ -35,6 +35,35 @@ class PublishPacket {
         self.identifier = packetId
         self.payload = payload
     }
+    
+    init?(header: FixedHeader, bytes: [Byte]) {
+        self.header = header
+        var bytes = bytes
+        let strLen = UInt16(msb: bytes.removeFirst(), lsb: bytes.removeFirst())
+        var str: [Byte] = []
+        for _ in 0..<strLen{
+            str.append(bytes.removeFirst())
+        }
+        
+        topicName = String(str)
+        dup = header.dup
+        qos = qosType(rawValue: header.qos)!
+        willRetain = header.retain
+        
+        qos.rawValue > 0 ? (identifier = UInt16(msb: bytes.removeFirst(), lsb: bytes.removeFirst())) : (identifier = nil)
+        
+        var payload: [String] = []
+        while bytes.count > 0 {
+            let strLen = UInt16(msb: bytes.removeFirst(), lsb: bytes.removeFirst())
+            var str: [Byte] = []
+            for _ in 0..<strLen {
+                str.append(bytes.removeFirst())
+            }
+            payload.append(String(str))
+        }
+        self.payload = payload
+        
+    }
 }
 
 extension PublishPacket: ControlPacket {
@@ -49,7 +78,7 @@ extension PublishPacket: ControlPacket {
         buffer.append(topicName.data)
 
         if qos.rawValue > 0 {
-            buffer.append(identifier.data)
+            buffer.append(identifier!.data)
         }
 
         for item in payload {
