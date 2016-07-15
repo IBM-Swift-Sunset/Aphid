@@ -9,69 +9,66 @@
 import Foundation
 import Socket
 
-class UnsubackPacket {
+class UnSubackPacket {
     var header: FixedHeader
-    var messageIDMSB: Byte
-    var messageIDLSB: Byte
-
-    init(header: FixedHeader) {
+    var packetId: UInt16
+    
+    init(header: FixedHeader, packetId: UInt16) {
         self.header = header
-        self.messageIDMSB = 0x00
-        self.messageIDLSB = 0x00
+        self.packetId = packetId
     }
-
+    
     init?(reader: SocketReader) {
         let code = decodeUInt8(reader)
         let _ = decodeUInt8(reader)
         header = FixedHeader(messageType: ControlCode(rawValue: code)!)
-        messageIDMSB = decodeUInt8(reader)
-        messageIDLSB = decodeUInt8(reader)
+        packetId = decodeUInt16(reader)
     }
 }
 
-extension UnsubackPacket : ControlPacket {
+extension UnSubackPacket : ControlPacket {
     func printPacket() {
-        print("Unsuback Packet Information")
+        print("Pubcomp Packet Information")
         print(header.messageType)
-        print(messageIDMSB)
-        print(messageIDLSB)
+        print(packetId)
     }
-
+    
     func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 128) else {
             throw NSError()
         }
-
-        buffer.append(messageIDMSB.data)
-        buffer.append(messageIDLSB.data)
+        
+        buffer.append(packetId.data)
+        
         header.remainingLength = 2
+        
         var packet = header.pack()
         packet.append(buffer)
-
+        
         do {
             try writer.write(from: packet)
+            
         } catch {
             throw NSError()
+            
         }
     }
-
+    
     func unpack(reader: SocketReader) {
-        messageIDMSB = decodeUInt8(reader)
-        messageIDLSB = decodeUInt8(reader)
+        packetId = decodeUInt16(reader)
     }
-
+    
     func validate() -> ErrorCodes {
         return .accepted
     }
 }
 
-func parseUnsuback(reader: SocketReader) {
+func unSubackPacket(reader: SocketReader) {
     let code = decodeUInt8(reader)
     let length = decodeUInt8(reader)
-    let messageIDMSB = decodeUInt8(reader)
-    let messageIDLSB = decodeUInt8(reader)
-
-    print("Unsuback Packet Information -- in Int form")
+    let packetId = decodeUInt16(reader)
+    
+    print("Puback Packet Information -- in Int form")
     print("Code \(code)   | Length \(length)")
-    print("messageIDMSB \(messageIDMSB) | messageIDLSB \(messageIDLSB)")
+    print("packetId \(packetId)")
 }

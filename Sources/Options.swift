@@ -8,14 +8,12 @@
 
 import Foundation
 
-struct ClientOptions  {
+struct Config {
     var clientId:                String
     var username:                String?
     var password:                String?
-
     var protocolName:            String
     var protocolVersion:         UInt
-    
     var servers:                 [NSURL]
 	var cleanSession:            Bool
 	var order:                   Bool
@@ -29,20 +27,15 @@ struct ClientOptions  {
 	var connectTimeout:          UInt16
 	var maxReconnectInterval:    UInt16
 	var autoReconnect:           Bool
-
-	/*var Store:                   Store?
-	var DefaultPublishHander:    MessageHandler
-	var OnConnect:               OnConnectHandler?
-	var OnConnectionLost:        ConnectionLostHandler*/
 	var writeTimeout:            UInt16?
 	var messageChannelDepth:     UInt
     
-    init(clientId: String, username: String? = nil, password: String? = nil) {
+    init(clientId: String, username: String? = nil, password: String? = nil, cleanSess: Bool) {
         servers = [NSURL]()
         self.clientId = clientId
         self.username = username
         self.password = password
-        cleanSession = true
+        cleanSession = cleanSess
         order = true
         willEnabled = false
         willTopic = nil
@@ -56,9 +49,6 @@ struct ClientOptions  {
         connectTimeout = 30
         maxReconnectInterval = 10
         autoReconnect = true
-        /*Store = nil
-        OnConnect = nil
-        OnConnectionLost = DefaultConnectionLostHandler*/
         writeTimeout = nil // nil represents timeout disabled
         messageChannelDepth = 100
         

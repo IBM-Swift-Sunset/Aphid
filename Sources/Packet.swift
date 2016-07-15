@@ -43,9 +43,6 @@ enum ControlCode: Byte {
     case disconnect = 0xe0
     case reserved   = 0xf0
 }
-let Connect: UInt8  = 1
-let Connack: UInt8  = 2
-let Publish  = 3
 
 enum ErrorCodes: Byte {
     case accepted                       = 0x00
@@ -57,9 +54,9 @@ enum ErrorCodes: Byte {
     case errUnknown                     = 0x06
 }
 enum qosType: Byte {
-    case atMostOnce = 0 // At Most One Delivery
-    case atLeastOnce = 1 // At Least Deliver Once
-    case exactlyOnce = 2 // Deliver Exactly Once
+    case atMostOnce = 0x00 // At Most One Delivery
+    case atLeastOnce = 0x01 // At Least Deliver Once
+    case exactlyOnce = 0x02 // Deliver Exactly Once
 }
 
 struct FixedHeader {
@@ -71,18 +68,17 @@ struct FixedHeader {
 
     init(messageType: ControlCode) {
         self.messageType = UInt8(messageType.rawValue & 0xF0) >> 4
-        dup = (messageType.rawValue & 0x08 >> 3).bool
-        qos = messageType.rawValue & 0x06 >> 1
+        dup = ((messageType.rawValue & 0x08) >> 3).bool
+        qos = (messageType.rawValue & 0x06) >> 1
         retain = (messageType.rawValue & 0x01).bool
         remainingLength = 0
-        print(description)
     }
 
     func pack() -> Data {
         var data = Data()
         data.append((messageType << 4 | dup.toByte << 3 | qos << 1 | retain.toByte).data)
 
-        for byte in encodeLength(remainingLength) {
+        for byte in remainingLength.toBytes {
             data.append(byte.data)
         }
 
@@ -100,14 +96,14 @@ extension FixedHeader: CustomStringConvertible {
 
 extension Aphid {
     func newControlPacket(packetType: ControlCode, topicName: String? = nil, packetId: UInt16? = nil,
-                          topics: [String]? = nil, qoss: [qosType]? = nil ) -> ControlPacket? {
+                          topics: [String]? = nil, qoss: [qosType]? = nil, message: [String]? = nil) -> ControlPacket? {
         switch packetType {
         case .connect:
             return ConnectPacket(header: FixedHeader(messageType: .connect), clientId: clientId )
         case .connack:
             return ConnackPacket(header: FixedHeader(messageType: .connack))
         case .publish:
-            return PublishPacket(header: FixedHeader(messageType: .publish), topicName: topicName!, packetId: packetId!)
+            return PublishPacket(header: FixedHeader(messageType: .publish), topicName: topicName!, packetId: packetId!, payload: message!)
         case .puback:
             return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
         case .pubrec:
@@ -138,6 +134,7 @@ extension Aphid {
 
 
 extension Bool {
+
     var toByte: Byte {
         get {
             return self ? 0x01 : 0x00
@@ -145,6 +142,18 @@ extension Bool {
     }
 }
 extension String {
+
+    init(_ reader: SocketReader) {
+        let fieldLength = decodeUInt16(reader)
+        let field = NSMutableData(capacity: Int(fieldLength))
+        do {
+            let _ = try reader.read(into: field!)
+        } catch {
+            
+        }
+        self = String(field)
+    }
+
     var data: Data {
         get {
             var array = Data()
@@ -158,7 +167,56 @@ extension String {
         }
     }
 }
+extension Int {
+
+    init(_ reader: SocketReader) {     // This doesn't work at the moment
+        var rLength: UInt32 = 0
+        var multiplier: UInt32 = 0
+        var b: Byte = 0x00
+        while true {
+            b = UInt8(reader)
+            let digit = b[0]
+            rLength |= UInt32(digit & 127) << multiplier
+            if (digit & 128) == 0 {
+                break
+            }
+            multiplier += 7
+        }
+        self = Int(rLength)
+    }
+
+    var toBytes: [Byte] {
+        get {
+            var encLength = [Byte]()
+            var length = self
+            
+            repeat {
+                var digit = Byte(length % 128)
+                length /= 128
+                if length > 0 {
+                    digit |= 0x80
+                }
+                encLength.append(digit)
+                
+            } while length != 0
+            
+            return encLength
+        }
+    }
+    
+}
 extension UInt8 {
+
+    init(_ reader: SocketReader) {
+        let num = NSMutableData(capacity: 1)
+        do {
+            let _ = try reader.read(into: num!)
+        } catch {
+            
+        }
+        self = decode(num!)
+    }
+
     var data: Data {
         return Data(bytes: [self])
     }
@@ -166,8 +224,23 @@ extension UInt8 {
     var bool: Bool {
         return self == 0x01 ? true : false
     }
+    
+    subscript(index: Int) -> UInt8 { //Returns a byte with only the index bit set if applicable
+        return 0
+    }
 }
 extension UInt16 {
+
+    init(_ reader: SocketReader) {
+        let uint = NSMutableData(capacity: 2)
+        do {
+            let _ = try reader.read(into: uint!)
+        } catch {
+            
+        }
+        self = decode(uint!)
+    }
+
     var data: Data {
         get {
             var data = Data()
@@ -178,6 +251,7 @@ extension UInt16 {
             return data
         }
     }
+
     var bytes: [Byte] {
         get {
             var bytes: [UInt8] = [0x00, 0x00]
@@ -187,50 +261,8 @@ extension UInt16 {
         }
     }
 }
-func encodeString(str: String) -> Data {
-    var array = Data()
 
-    let utf = str.data(using: String.Encoding.utf8)!
 
-    array.append(encodeUInt16ToData(UInt16(utf.count)))
-    array.append(utf)
-
-    return array
-}
-func encodeBit(_ bool: Bool) -> Byte {
-    return bool ? 0x01 : 0x00
-}
-func encodeUInt16ToData(_ value: UInt16) -> Data {
-    var data = Data()
-    var bytes: [UInt8] = [0x00, 0x00]
-    bytes[0] = UInt8(value >> 8)
-    bytes[1] = UInt8(value & 0x00ff)
-    data.append(Data(bytes: bytes, count: 2))
-    return data
-}
-func encodeUInt16(_ value: UInt16) -> [Byte] {
-    var bytes: [UInt8] = [0x00, 0x00]
-    bytes[0] = UInt8(value >> 8)
-    bytes[1] = UInt8(value & 0x00ff)
-    return bytes
-}
-
-func encodeUInt8(_ value: UInt8) -> Data {
-    return Data(bytes: [value])
-}
-
-/*func encodeUInt16(_ value: UInt16) -> Data {
-    var value = value
-    return Data(bytes: &UInt8(value), count: sizeof(UInt16))
-}*/
-
-/*public func encode<T>(_ value: T) -> Data {
-    var value = value
-    return withUnsafePointer(&value) { p in
-        Data(bytes: UnsafePointer<UInt8>(p), count: sizeof(p))
-        //Data(bytes: p, count: sizeofValue(value))
-    }
-}*/
 func getBytes(_ value: Data) {
     value.enumerateBytes() {
         buffer, byteIndex, stop in
@@ -241,26 +273,7 @@ func getBytes(_ value: Data) {
         }
     }
 }
-func encodeLength(_ length: Int) -> [Byte] {
-    var encLength = [Byte]()
-    var length = length
 
-    repeat {
-        var digit = Byte(length % 128)
-        length /= 128
-        if length > 0 {
-            digit |= 0x80
-        }
-        encLength.append(digit)
-
-    } while length != 0
-
-    return encLength
-}
-
-func decodebit(_ byte: Byte) -> Bool {
-    return byte == 0x01 ? true : false
-}
 func decodeString(_ reader: SocketReader) -> String {
     let fieldLength = decodeUInt16(reader)
     let field = NSMutableData(capacity: Int(fieldLength))

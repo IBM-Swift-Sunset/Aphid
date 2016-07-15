@@ -20,7 +20,7 @@ class PublishPacket {
 
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
         
-        topicName: String, packetId: UInt16, payload: [String] = []) {
+        topicName: String, packetId: UInt16, payload: [String] = ["This plant needs water"]) {
         
         var header = header
         header.dup = dup

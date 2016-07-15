@@ -11,21 +11,18 @@ import Socket
 
 class PubcompPacket {
     var header: FixedHeader
-    var messageIDMSB: Byte
-    var messageIDLSB: Byte
+    var packetId: UInt16
 
-    init(header: FixedHeader) {
+    init(header: FixedHeader, packetId: UInt16) {
         self.header = header
-        self.messageIDMSB = 0x00
-        self.messageIDLSB = 0x00
+        self.packetId = packetId
     }
 
     init?(reader: SocketReader) {
         let code = decodeUInt8(reader)
         let _ = decodeUInt8(reader)
         header = FixedHeader(messageType: ControlCode(rawValue: code)!)
-        messageIDMSB = decodeUInt8(reader)
-        messageIDLSB = decodeUInt8(reader)
+        packetId = decodeUInt16(reader)
     }
 }
 
@@ -33,8 +30,7 @@ extension PubcompPacket : ControlPacket {
     func printPacket() {
         print("Pubcomp Packet Information")
         print(header.messageType)
-        print(messageIDMSB)
-        print(messageIDLSB)
+        print(packetId)
     }
 
     func write(writer: SocketWriter) throws {
@@ -42,22 +38,24 @@ extension PubcompPacket : ControlPacket {
             throw NSError()
         }
 
-        buffer.append(messageIDMSB.data)
-        buffer.append(messageIDLSB.data)
+        buffer.append(packetId.data)
+
         header.remainingLength = 2
+
         var packet = header.pack()
         packet.append(buffer)
 
         do {
             try writer.write(from: packet)
+
         } catch {
             throw NSError()
+
         }
     }
 
     func unpack(reader: SocketReader) {
-        messageIDMSB = decodeUInt8(reader)
-        messageIDLSB = decodeUInt8(reader)
+        packetId = decodeUInt16(reader)
     }
 
     func validate() -> ErrorCodes {
@@ -68,10 +66,9 @@ extension PubcompPacket : ControlPacket {
 func parsePubcomp(reader: SocketReader) {
     let code = decodeUInt8(reader)
     let length = decodeUInt8(reader)
-    let messageIDMSB = decodeUInt8(reader)
-    let messageIDLSB = decodeUInt8(reader)
-
-    print("Pubcomp Packet Information -- in Int form")
+    let packetId = decodeUInt16(reader)
+    
+    print("Puback Packet Information -- in Int form")
     print("Code \(code)   | Length \(length)")
-    print("messageIDMSB \(messageIDMSB) | messageIDLSB \(messageIDLSB)")
+    print("packetId \(packetId)")
 }

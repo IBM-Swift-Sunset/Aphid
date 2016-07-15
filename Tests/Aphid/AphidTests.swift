@@ -2,22 +2,23 @@ import XCTest
 @testable import Aphid
 
 class AphidTests: XCTestCase {
+    let aphid: Aphid = Aphid(clientId: "tester")
+    
+
     func testConnect() {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct results.
-        print("////// Test Connect //////")
         let aphid = Aphid(clientId: "tester")
         
         do {
-            print(try aphid.connect())
-            print(aphid.publish(message: "a/b"))
-            aphid.ping()
-            print(aphid.subscribe(topic: ["a/b","c/d"], qoss: [.atLeastOnce,.exactlyOnce]))
-            print(aphid.unsubscribe(topic: "a/b"))
+            let _ = try aphid.connect()
+            let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
+            let _ = aphid.ping()
+            let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
+            let _ = aphid.unsubscribe(topic: ["/basilplant/"])
         } catch {
-            
+     
         }
-        
     }
     /*func testPublish() {
         // This is an example of a functional test case.

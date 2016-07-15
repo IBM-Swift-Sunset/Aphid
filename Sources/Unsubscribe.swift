@@ -25,6 +25,7 @@ class UnsubscribePacket {
 extension UnsubscribePacket : ControlPacket {
 
     func write(writer: SocketWriter) throws {
+
         guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
@@ -32,14 +33,15 @@ extension UnsubscribePacket : ControlPacket {
         buffer.append(packetId.data)
 
         for i in 0..<topics.count {
-            buffer.append(encodeString(str: topics[i]))
+            buffer.append(topics[i].data)
         }
 
         header.remainingLength = buffer.count
-        let _ = header.pack()
+        var packet = header.pack()
+        packet.append(buffer)
 
         do {
-            try writer.write(from: buffer)
+            try writer.write(from: packet)
 
         } catch {
             throw error

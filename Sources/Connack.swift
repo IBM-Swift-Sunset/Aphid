@@ -21,11 +21,14 @@ class ConnackPacket {
     }
 
     init?(reader: SocketReader) {
-        let code = decodeUInt8(reader)
-        let _ = decodeUInt8(reader)
+        let code = UInt8(reader)
+        let length = UInt8(reader)
         header = FixedHeader(messageType: ControlCode(rawValue: code)!)
-        flags = decodeUInt8(reader)
-        responseCode = decodeUInt8(reader)
+        flags = UInt8(reader)
+        responseCode = UInt8(reader)
+        print("Connack Packet Information -- in Int form")
+        print("Code \(code)   | Length \(length)")
+        print("Flags \(flags) | Response \(responseCode)")
     }
 
 }
@@ -78,10 +81,10 @@ extension ConnackPacket: ControlPacket {
     }
 }
 func parseConnack(reader: SocketReader) {
-    let code = decodeUInt8(reader)
-    let length = decodeUInt8(reader)
-    let flags = decodeUInt8(reader)
-    let responseCode = decodeUInt8(reader)
+    let code = UInt8(reader)
+    let length = UInt8(reader)
+    let flags = UInt8(reader)
+    let responseCode = UInt8(reader)
 
     print("Connack Packet Information -- in Int form")
     print("Code \(code)   | Length \(length)")

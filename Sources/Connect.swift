@@ -118,13 +118,13 @@ extension ConnectPacket : ControlPacket {
         self.protocolVersion = decodeUInt8(reader)
         let options = decodeUInt8(reader)
 
-        self.reservedBit  = decodebit(1 & options)
-        self.cleanSession = decodebit(1 & (options >> 1))
-        self.willFlag     = decodebit(1 & (options >> 2))
+        self.reservedBit  = (1 & options).bool
+        self.cleanSession = (1 & (options >> 1)).bool
+        self.willFlag     = (1 & (options >> 2)).bool
         self.willQoS      = qosType(rawValue: 3 & (options >> 3))!
-        self.willRetain   = decodebit(1 & (options >> 5))
-        self.usernameFlag = decodebit(1 & (options >> 6))
-        self.passwordFlag = decodebit(1 & (options >> 7))
+        self.willRetain   = (1 & (options >> 5)).bool
+        self.usernameFlag = (1 & (options >> 6)).bool
+        self.passwordFlag = (1 & (options >> 7)).bool
 
         self.keepAlive = decodeUInt16(reader)
 
