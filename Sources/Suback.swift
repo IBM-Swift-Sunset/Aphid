@@ -12,21 +12,26 @@ import Socket
 class SubackPacket {
     var header: FixedHeader
     var packetId: UInt16
-    
-    init(header: FixedHeader, packetId: UInt16) {
+    var returnCode: Byte
+
+    init(header: FixedHeader, packetId: UInt16, returnCode: Byte) {
         self.header = header
         self.packetId = packetId
+        self.returnCode = returnCode
     }
     
-    init?(reader: SocketReader) {
-        let code = decodeUInt8(reader)
-        let _ = decodeUInt8(reader)
-        header = FixedHeader(messageType: ControlCode(rawValue: code)!)
-        packetId = decodeUInt16(reader)
+    init?(header: FixedHeader, bytes: [Byte]) {
+        self.header = header
+        packetId = UInt16(msb: bytes[1], lsb: bytes[0])
+        returnCode = bytes[2]
     }
+    
 }
 
 extension SubackPacket : ControlPacket {
+    var description: String {
+        return header.description
+    }
     func printPacket() {
         print("Pubcomp Packet Information")
         print(header.messageType)

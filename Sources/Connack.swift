@@ -20,15 +20,10 @@ class ConnackPacket {
         self.responseCode = 0x00 // TEmporary
     }
 
-    init?(reader: SocketReader) {
-        let code = UInt8(reader)
-        let length = UInt8(reader)
-        header = FixedHeader(messageType: ControlCode(rawValue: code)!)
-        flags = UInt8(reader)
-        responseCode = UInt8(reader)
-        print("Connack Packet Information -- in Int form")
-        print("Code \(code)   | Length \(length)")
-        print("Flags \(flags) | Response \(responseCode)")
+    init(header: FixedHeader, bytes: [Byte]) {
+        self.header = header
+        flags = bytes[0]
+        responseCode = bytes[1]
     }
 
 }
@@ -39,6 +34,9 @@ extension ConnackPacket: ControlPacket {
         print(header.messageType)
         print(flags)
         print(responseCode)
+    }
+    var description: String {
+        return header.description
     }
     func write(writer: SocketWriter) throws {
 

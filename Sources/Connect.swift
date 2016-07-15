@@ -11,7 +11,7 @@ import Foundation
 import Socket
 
 protocol ControlPacket {
-
+    var description: String { get }
     func write(writer: SocketWriter) throws
     func unpack(reader: SocketReader)
     func validate() -> ErrorCodes
@@ -70,10 +70,14 @@ class ConnectPacket {
         self.username = username
         self.password = password
     }
+
 }
 
 extension ConnectPacket : ControlPacket {
-
+    
+    var description: String {
+        return header.description
+    }
     func write(writer: SocketWriter) throws {
 
         guard var buffer = Data(capacity: 512) else {
@@ -149,21 +153,17 @@ extension ConnectPacket : ControlPacket {
             return .errRefusedIDRejected
         }
         if reservedBit {
-            //Bad reserved bit
             return .errRefusedBadProtocolVersion
         }
         if (protocolName == "MQIsdp" && protocolVersion != 3) || (protocolName == "MQTT" && protocolVersion != 4) {
-            //Mismatched or unsupported protocol version
             return .errRefusedBadProtocolVersion
         }
         if protocolName != "MQIsdp" && protocolName != "MQTT" {
-            //Bad protocol name
             return .errRefusedBadProtocolVersion
         }
         if clientId.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
           username?.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
           password?.lengthOfBytes(using: String.Encoding.utf8) > 65535 {
-            //Bad size field
            return .errRefusedBadProtocolVersion
         }
         return .accepted

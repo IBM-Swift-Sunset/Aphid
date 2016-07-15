@@ -18,15 +18,16 @@ class UnSubackPacket {
         self.packetId = packetId
     }
     
-    init?(reader: SocketReader) {
-        let code = decodeUInt8(reader)
-        let _ = decodeUInt8(reader)
-        header = FixedHeader(messageType: ControlCode(rawValue: code)!)
-        packetId = decodeUInt16(reader)
+    init?(header: FixedHeader, bytes: [Byte]) {
+        self.header = header
+        packetId = UInt16(msb: bytes[1], lsb: bytes[0])
     }
 }
 
 extension UnSubackPacket : ControlPacket {
+    var description: String {
+        return header.description
+    }
     func printPacket() {
         print("Pubcomp Packet Information")
         print(header.messageType)

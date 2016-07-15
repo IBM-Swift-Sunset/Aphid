@@ -23,7 +23,9 @@ class UnsubscribePacket {
 }
 
 extension UnsubscribePacket : ControlPacket {
-
+    var description: String {
+        return header.description
+    }
     func write(writer: SocketWriter) throws {
 
         guard var buffer = Data(capacity: 512) else {

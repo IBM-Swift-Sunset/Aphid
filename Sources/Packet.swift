@@ -73,6 +73,13 @@ struct FixedHeader {
         retain = (messageType.rawValue & 0x01).bool
         remainingLength = 0
     }
+    init?(_ bytes: [Byte]){
+        self.messageType = UInt8(bytes[0] & 0xF0) >> 4
+        dup = ((bytes[0] & 0x08) >> 3).bool
+        qos = (bytes[0] & 0x06) >> 1
+        retain = (bytes[0] & 0x01).bool
+        remainingLength = Int(bytes[1])
+    }
 
     func pack() -> Data {
         var data = Data()
@@ -89,14 +96,14 @@ struct FixedHeader {
 extension FixedHeader: CustomStringConvertible {
 
     var description: String {
-        return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain)"
+        return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain) remainingLength \(remainingLength)"
     }
 
 }
 
 extension Aphid {
     func newControlPacket(packetType: ControlCode, topicName: String? = nil, packetId: UInt16? = nil,
-                          topics: [String]? = nil, qoss: [qosType]? = nil, message: [String]? = nil) -> ControlPacket? {
+                          topics: [String]? = nil, qoss: [qosType]? = nil, message: [String]? = nil, returnCode: Byte? = nil) -> ControlPacket? {
         switch packetType {
         case .connect:
             return ConnectPacket(header: FixedHeader(messageType: .connect), clientId: clientId )
@@ -105,29 +112,65 @@ extension Aphid {
         case .publish:
             return PublishPacket(header: FixedHeader(messageType: .publish), topicName: topicName!, packetId: packetId!, payload: message!)
         case .puback:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return PubackPacket(header: FixedHeader(messageType: .puback), packetId: packetId!)
         case .pubrec:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return PubrecPacket(header: FixedHeader(messageType: .pubrec), packetId: packetId!)
         case .pubrel:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return PubrelPacket(header: FixedHeader(messageType: .pubrel), packetId: packetId!)
         case .pubcomp:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return PubcompPacket(header: FixedHeader(messageType: .pubcomp), packetId: packetId!)
         case .subscribe:
-            return SubscribePacket(header: FixedHeader(messageType: .subscribe), packetId: packetId!, topics: topics!, qoss: qoss!)// Wrong
+            return SubscribePacket(header: FixedHeader(messageType: .subscribe), packetId: packetId!, topics: topics!, qoss: qoss!)
         case .suback:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return SubackPacket(header: FixedHeader(messageType: .suback), packetId: packetId!, returnCode: returnCode!)
         case .unsubscribe:
-            return UnsubscribePacket(header: FixedHeader(messageType: .unsubscribe), packetId: packetId!, topics: topics!) // Wrong
+            return UnsubscribePacket(header: FixedHeader(messageType: .unsubscribe), packetId: packetId!, topics: topics!)
         case .unsuback:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return UnSubackPacket(header: FixedHeader(messageType: .unsuback), packetId: packetId!)
         case .pingreq:
             return PingreqPacket(header: FixedHeader(messageType: .pingreq))
         case .pingresp:
-            return ConnackPacket(header: FixedHeader(messageType: .connack)) // Wrong
+            return PingrespPacket(header: FixedHeader(messageType: .pingresp))
         case .disconnect:
             return DisconnectPacket(header: FixedHeader(messageType: .disconnect))
         default:
             return nil
+        }
+    }
+    func newControlPacket(header: FixedHeader, bytes: [Byte]) -> ControlPacket? {
+        let code: ControlCode = ControlCode(rawValue: (header.messageType << 4))!
+        switch code {
+        
+        /*case .connect:
+            return ConnectPacket(header: header, bytes: bytes)*/
+        case .connack:
+            return ConnackPacket(header: header, bytes: bytes)
+        /*case .publish:
+            return PublishPacket(header: header, bytes: bytes)*/
+        case .puback:
+            return PubackPacket(header: header, bytes: bytes)
+        case .pubrec:
+            return PubrecPacket(header: header, bytes: bytes)
+        case .pubrel:
+            return PubrelPacket(header: header, bytes: bytes)
+        case .pubcomp:
+            return PubcompPacket(header: header, bytes: bytes)
+        /*case .subscribe:
+            return SubscribePacket(header: header, bytes: bytes) */
+        case .suback:
+            return SubackPacket(header: header, bytes: bytes)
+        /*case .unsubscribe:
+            return UnsubscribePacket(header: header, bytes: bytes)*/
+        case .unsuback:
+            return UnSubackPacket(header: header, bytes: bytes)
+        case .pingreq:
+            return PingreqPacket(header: header)
+        case .pingresp:
+            return PingrespPacket(header: header)
+        case .disconnect:
+            return DisconnectPacket(header: header)
+        default:
+            return ConnackPacket(header: header, bytes: bytes)
         }
     }
 }
@@ -240,7 +283,11 @@ extension UInt16 {
         }
         self = decode(uint!)
     }
-
+    
+    init(msb: Byte, lsb: Byte) {
+        self = (UInt16(msb) << 8) | UInt16(lsb)
+    }
+    
     var data: Data {
         get {
             var data = Data()

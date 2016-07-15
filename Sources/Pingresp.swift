@@ -19,6 +19,10 @@ class PingrespPacket {
 }
 
 extension PingrespPacket: ControlPacket {
+    var description: String {
+        return header.description
+    }
+
     func write(writer: SocketWriter) throws {
         let packet = header.pack()
         try writer.write(from: packet)

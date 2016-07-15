@@ -28,9 +28,14 @@ public class Aphid {
     var password: String?
     var secureMQTT: Bool = false
     var cleanSess: Bool
-
-    var socket: Socket?
     
+    var outMessages = [Int:Bool]()
+    var socket: Socket?
+
+    var delegate: MQTTDelegate?
+    
+    var buffer: [Byte] = []
+
     var status = connected
     var config: Config
 
@@ -58,26 +63,39 @@ public class Aphid {
     }
     
     public func loop() {
-        repeat {
-            do {
-                let _ = try Socket.checkStatus(for: [socket!])
-            } catch {
-                debugPrint("Socket cannot be read from")
-            }
-            /*DispatchQueue.global(
-             attributes: DispatchQueue.GlobalAttributes(rawValue: UInt64(Int(QOS_CLASS_USER_INTERACTIVE.rawValue)))).sync() {
-                 let _ = try Socket.wait(for: [sock], timeout: 100)
-                 print("hello there")
-                 let packet = ConnackPacket(reader: sock)?.validate()
-                 print(packet)
-             }*/
-        } while true
+        
+        guard let _ = socket else {
+            NSLog("Failure not initialized")
+            return
+        }
+
+        DispatchQueue.global(attributes: DispatchQueue.GlobalAttributes.qosUtility).async {
+            repeat {
+            
+                do {
+                    let ready = try Socket.wait(for: [self.socket!], timeout: 1)
+
+                    if ready != nil {
+                        let _ = self.readSocket(self.socket!)
+                        
+                    }
+                    if self.buffer.count > 0 {
+                        let packet = self.parseBuffer()
+                        print(packet,packet.description)
+                    }
+                } catch {
+                    NSLog("Failure on Socket.wait")
+
+                }
+
+            } while true
+        }
     }
     // Initial Connect
     public func connect() throws -> Bool {
 
         socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
-            
+
         guard let sock = socket,
                   connectPacket = newControlPacket(packetType: .connect) else {
 
@@ -90,9 +108,39 @@ public class Aphid {
 
         try connectPacket.write(writer: sock)
 
+        delegate?.deliveryComplete(token: "Connect")
+
         return true
     }
-    
+
+    func readSocket(_ reader: SocketReader) -> Int? {
+        do {
+            let tmpBuffer = NSMutableData(capacity: 128)
+            let length = try reader.read(into: tmpBuffer!)
+            var bytes = [UInt8](repeating: 0, count: (tmpBuffer?.length)!)
+            tmpBuffer?.getBytes(&bytes, length:(tmpBuffer?.length)! * sizeof(UInt8.self))
+            buffer.append(contentsOf: bytes)
+            
+            return length
+
+        } catch {
+            
+        }
+        return nil
+    }
+    func parseBuffer() -> ControlPacket {
+        let controlCode = buffer.removeFirst()
+        let length = buffer.removeFirst()
+        let bytes = [controlCode, length]
+        let fixedHeader: FixedHeader = FixedHeader(bytes)!
+        var payload: [Byte] = []
+        for _ in 0..<length {
+            payload.append(buffer.removeFirst())
+        }
+        let packet = newControlPacket(header: fixedHeader, bytes: payload)
+
+        return packet!
+    }
     // Reconnect
     func reconnect() -> Bool {
         return true
