@@ -47,15 +47,27 @@ class AphidTests: XCTestCase, MQTTDelegate {
             let _ = aphid.ping()
             let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
             let _ = aphid.unsubscribe(topic: ["/basilplant/"])
-            print("Executed all instruction")
+
         } catch {
      
         }
         
-        // Wait for completion
         sleep(10)
+        // Wait for completion
+        waitForExpectations(withTimeout: 10) {
+            error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
         
-        // aphid.disconnect(uint: <#T##UInt#>)
+        do {
+            try aphid.disconnect(uint: 1)
+
+        } catch {
+            print(error)
+            
+        }
     }
     
     
@@ -65,13 +77,14 @@ class AphidTests: XCTestCase, MQTTDelegate {
     
     
     func deliveryComplete(token: String) {
-        
+        if token == "2: dup: false qos: 0 retain false remainingLength 2" {
+            expectation1.fulfill()
+        }
         print(token)
         
     }
     
     func messageArrived(topic: String, message: String) throws {
-        
         expectation1.fulfill()
         print("Message Arrived")
     }
