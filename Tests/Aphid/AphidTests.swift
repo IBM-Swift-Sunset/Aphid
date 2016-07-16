@@ -19,16 +19,26 @@ import XCTest
 @testable import Aphid
 
 class AphidTests: XCTestCase, MQTTDelegate {
-    let aphid: Aphid = Aphid(clientId: "tester")
+    
+    private var aphid: Aphid!
     var updated: Bool? = nil
+    
+    var expectation1: XCTestExpectation!
 
+    override func setUp() {
+        super.setUp()
+        
+        aphid = Aphid(clientId: "tester")
+        
+        aphid.delegate = self
+
+    }
+    
     func testConnect() {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct results.
-        let aphid = Aphid(clientId: "tester")
         
-        let delegate = self
-        aphid.delegate = delegate
+        expectation1 = expectation(withDescription: "Received a message")
 
         do {
             let _ = try aphid.connect()
@@ -41,23 +51,34 @@ class AphidTests: XCTestCase, MQTTDelegate {
         } catch {
      
         }
+        
+        // Wait for completion
         sleep(10)
+        
+        // aphid.disconnect(uint: <#T##UInt#>)
     }
+    
+    
     func connectionLost() throws {
         print("connection lost")
     }
+    
+    
     func deliveryComplete(token: String) {
+        
         print(token)
         
     }
+    
     func messageArrived(topic: String, message: String) throws {
+        
+        expectation1.fulfill()
         print("Message Arrived")
     }
 
     static var allTests : [(String, (AphidTests) -> () throws -> Void)] {
         return [
             ("testConnect", testConnect),
-            //("testPublish", testPublish),
         ]
     }
 }
