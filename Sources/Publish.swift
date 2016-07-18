@@ -1,12 +1,12 @@
 /**
  Copyright IBM Corporation 2016
- 
+
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
  http://www.apache.org/licenses/LICENSE-2.0
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,9 +27,9 @@ struct PublishPacket {
     var payload: [String]
 
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
-        
+
         topicName: String, packetId: UInt16, payload: [String] = []) {
-        
+
         var header = header
         header.dup = dup
         header.qos = qos.rawValue
@@ -43,20 +43,20 @@ struct PublishPacket {
         self.identifier = packetId
         self.payload = payload
     }
-    
+
     init?(header: FixedHeader, data: Data) {
         var data = data
 
         self.header = header
-        
+
         dup = header.dup
         qos = qosType(rawValue: header.qos)!
         willRetain = header.retain
 
         var payloadSize = header.remainingLength
-        
+
         topicName = data.decodeString
-        
+
         if qos.rawValue > 0 {
             identifier = data.decodeUInt16
             payloadSize -= topicName.characters.count + 4
@@ -66,14 +66,14 @@ struct PublishPacket {
         }
 
         var messages = [String]()
-        
+
         while data.count > 1 {
             let str = data.decodeString
             messages.append(str)
             payloadSize -= str.characters.count
         }
         payload = messages
-        
+
     }
 }
 

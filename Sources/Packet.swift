@@ -1,12 +1,12 @@
 /**
  Copyright IBM Corporation 2016
- 
+
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
  http://www.apache.org/licenses/LICENSE-2.0
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,6 +68,7 @@ public enum ErrorCodes: Byte {
     case errNotAuthorize                = 0x05
     case errUnknown                     = 0x06
 }
+
 public enum qosType: Byte {
     case atMostOnce = 0x00 // At Most One Delivery
     case atLeastOnce = 0x01 // At Least Deliver Once
@@ -88,12 +89,20 @@ public struct FixedHeader {
         retain = (messageType.rawValue & 0x01).bool
         remainingLength = 0
     }
-    init?(_ data: Data){
-        self.messageType = UInt8(data[0] & 0xF0) >> 4
-        dup = ((data[0] & 0x08) >> 3).bool
-        qos = (data[0] & 0x06) >> 1
-        retain = (data[0] & 0x01).bool
-        remainingLength = Int(data[1])
+    init?(_ data: Data) {
+        var data = data
+        let options = data.decodeUInt8
+
+        self.messageType = UInt8(options & 0xF0) >> 4
+        dup = ((options & 0x08) >> 3).bool
+        qos = (options & 0x06) >> 1
+        retain = (options & 0x01).bool
+
+        guard let length = decodeLength(data) else {
+            return nil
+        }
+
+        remainingLength = length
     }
 
     func pack() -> Data {
@@ -154,7 +163,7 @@ extension Aphid {
     func newControlPacket(header: FixedHeader, data: Data) -> ControlPacket? {
         let code: ControlCode = ControlCode(rawValue: (header.messageType << 4))!
         switch code {
-        
+
         case .connect:
             return ConnectPacket(header: header, data: data)
         case .connack:
@@ -189,7 +198,6 @@ extension Aphid {
     }
 }
 
-
 extension Bool {
 
     var toByte: Byte {
@@ -198,6 +206,7 @@ extension Bool {
         }
     }
 }
+
 extension String {
 
     init(_ reader: SocketReader) {
@@ -206,7 +215,7 @@ extension String {
         do {
             let _ = try reader.read(into: field!)
         } catch {
-            
+
         }
         self = String(field)
     }
@@ -223,6 +232,7 @@ extension String {
         }
     }
 }
+
 extension Int {
 
     init(_ reader: SocketReader) {     // This doesn't work at the moment
@@ -245,7 +255,7 @@ extension Int {
         get {
             var encLength = [Byte]()
             var length = self
-            
+
             repeat {
                 var digit = Byte(length % 128)
                 length /= 128
@@ -253,14 +263,15 @@ extension Int {
                     digit |= 0x80
                 }
                 encLength.append(digit)
-                
+
             } while length != 0
-            
+
             return encLength
         }
     }
-    
+
 }
+
 extension UInt8 {
 
     init(_ reader: SocketReader) {
@@ -268,7 +279,7 @@ extension UInt8 {
         do {
             let _ = try reader.read(into: num!)
         } catch {
-            
+
         }
         self = decode(num!)
     }
@@ -280,7 +291,7 @@ extension UInt8 {
     var bool: Bool {
         return self == 0x01 ? true : false
     }
-    
+
     var int: Int {
         return Int(self)
     }
@@ -289,6 +300,7 @@ extension UInt8 {
         return 0
     }
 }
+
 extension UInt16 {
 
     init(_ reader: SocketReader) {
@@ -296,20 +308,20 @@ extension UInt16 {
         do {
             let _ = try reader.read(into: uint!)
         } catch {
-            
+
         }
         self = decode(uint!)
     }
-    init(random: Bool){
+    init(random: Bool) {
         var r: UInt16 = 0
         arc4random_buf(&r, sizeof(UInt16.self))
         self = r
     }
-    
+
     init(msb: Byte, lsb: Byte) {
         self = (UInt16(msb) << 8) | UInt16(lsb)
     }
-    
+
     var data: Data {
         get {
             var data = Data()
@@ -330,6 +342,7 @@ extension UInt16 {
         }
     }
 }
+
 extension Data {
     var decodeUInt8: UInt8 {
         mutating get {
@@ -341,7 +354,7 @@ extension Data {
     var decodeUInt16: UInt16 {
         mutating get {
             let uint = UInt16(msb: self[0], lsb: self[1])
-            self = self.subdata(in: Range(uncheckedBounds: (2,self.count)))
+            self = self.subdata(in: Range(uncheckedBounds: (2, self.count)))
             return uint
         }
     }
@@ -405,17 +418,21 @@ public func decode<T>(_ data: NSData) -> T {
     return pointer.move()
 }
 
-func decodeLength(_ bytes: [Byte]) -> Int {
+func decodeLength(_ data: Data) -> Int? {
+    var data = data
     var rLength: UInt32 = 0
-    var multiplier: UInt32 = 0
-    var b: [Byte] = [0x00]
-    while true {
-        let digit = b[0]
-        rLength |= UInt32(digit & 127) << multiplier
-        if (digit & 128) == 0 {
+    var multiplier: UInt32 = 1
+    var byte = UInt8(0x00)
+    repeat {
+        if data.count == 0 {
+            return nil
+        }
+        byte = data.decodeUInt8
+        rLength += UInt32(byte & 127) * multiplier
+        multiplier *= 128
+        if (multiplier) > 128*128*128 {
             break
         }
-        multiplier += 7
-    }
+    } while (byte & 0x80) != 0
     return Int(rLength)
 }

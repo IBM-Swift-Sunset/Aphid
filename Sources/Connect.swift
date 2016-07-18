@@ -1,12 +1,12 @@
 /**
  Copyright IBM Corporation 2016
- 
+
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
  http://www.apache.org/licenses/LICENSE-2.0
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,14 +70,14 @@ struct ConnectPacket {
         self.username = username
         self.password = password
     }
-    init(header: FixedHeader, data: Data){
+    init(header: FixedHeader, data: Data) {
         var data = data
-        
+
         self.header = header
         self.protocolName = data.decodeString
         self.protocolVersion = data.decodeUInt8
         let options = data.decodeUInt8
-        
+
         self.reservedBit  = (1 & options).bool
         self.cleanSession = (1 & (options >> 1)).bool
         self.willFlag     = (1 & (options >> 2)).bool
@@ -85,12 +85,12 @@ struct ConnectPacket {
         self.willRetain   = (1 & (options >> 5)).bool
         self.usernameFlag = (1 & (options >> 6)).bool
         self.passwordFlag = (1 & (options >> 7)).bool
-        
+
         self.keepAlive = data.decodeUInt16
-        
+
         //Payload
         self.clientId = data.decodeString
-        
+
         if willFlag {
             self.willTopic = data.decodeString
             self.willMessage = data.decodeString
@@ -106,7 +106,7 @@ struct ConnectPacket {
 }
 
 extension ConnectPacket : ControlPacket {
-    
+
     var description: String {
         return header.description
     }
