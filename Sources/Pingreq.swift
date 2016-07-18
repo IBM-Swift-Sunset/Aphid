@@ -33,7 +33,11 @@ extension PingreqPacket: ControlPacket {
 
     func write(writer: SocketWriter) throws {
         let packet = header.pack()
-        try writer.write(from: packet)
+        do {
+            try writer.write(from: packet)
+        } catch {
+            print(error)
+        }
     }
 
     func unpack(reader: SocketReader) {

@@ -27,20 +27,15 @@ class UnSubackPacket {
         self.packetId = packetId
     }
     
-    init?(header: FixedHeader, bytes: [Byte]) {
+    init?(header: FixedHeader, data: Data) {
         self.header = header
-        packetId = UInt16(msb: bytes[0], lsb: bytes[1])
+        packetId = UInt16(msb: data[0], lsb: data[1])
     }
 }
 
 extension UnSubackPacket : ControlPacket {
     var description: String {
         return "\(header.description) | ID: \(packetId)"
-    }
-    func printPacket() {
-        print("Pubcomp Packet Information")
-        print(header.messageType)
-        print(packetId)
     }
     
     func write(writer: SocketWriter) throws {
@@ -71,14 +66,4 @@ extension UnSubackPacket : ControlPacket {
     func validate() -> ErrorCodes {
         return .accepted
     }
-}
-
-func unSubackPacket(reader: SocketReader) {
-    let code = decodeUInt8(reader)
-    let length = decodeUInt8(reader)
-    let packetId = decodeUInt16(reader)
-    
-    print("Puback Packet Information -- in Int form")
-    print("Code \(code)   | Length \(length)")
-    print("packetId \(packetId)")
 }

@@ -15,15 +15,7 @@
  */
 
 import Foundation
-
 import Socket
-
-protocol ControlPacket {
-    var description: String { get }
-    func write(writer: SocketWriter) throws
-    func unpack(reader: SocketReader)
-    func validate() -> ErrorCodes
-}
 
 class ConnectPacket {
 
@@ -77,6 +69,38 @@ class ConnectPacket {
         self.willMessage = willMessage
         self.username = username
         self.password = password
+    }
+    init(header: FixedHeader, data: Data){
+        var data = data
+        
+        self.header = header
+        self.protocolName = data.decodeString
+        self.protocolVersion = data.decodeUInt8
+        let options = data.decodeUInt8
+        
+        self.reservedBit  = (1 & options).bool
+        self.cleanSession = (1 & (options >> 1)).bool
+        self.willFlag     = (1 & (options >> 2)).bool
+        self.willQoS      = qosType(rawValue: 3 & (options >> 3))!
+        self.willRetain   = (1 & (options >> 5)).bool
+        self.usernameFlag = (1 & (options >> 6)).bool
+        self.passwordFlag = (1 & (options >> 7)).bool
+        
+        self.keepAlive = data.decodeUInt16
+        
+        //Payload
+        self.clientId = data.decodeString
+        
+        if willFlag {
+            self.willTopic = data.decodeString
+            self.willMessage = data.decodeString
+        }
+        if usernameFlag {
+            self.username = data.decodeString
+        }
+        if passwordFlag {
+            self.password = data.decodeString
+        }
     }
 
 }

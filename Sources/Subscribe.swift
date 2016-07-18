@@ -32,6 +32,21 @@ class SubscribePacket {
         self.qoss = qoss
 
     }
+    init(header: FixedHeader, data: Data) {
+        var data = data
+        
+        self.header = header
+        self.packetId = data.decodeUInt16
+
+        var topics = [String]()
+        var qoss = [qosType]()
+        while data.count > 0 {
+            topics.append(data.decodeString)
+            qoss.append(qosType(rawValue: data.decodeUInt8)!)
+        }
+        self.topics = topics
+        self.qoss = qoss
+    }
 }
 
 extension SubscribePacket : ControlPacket {

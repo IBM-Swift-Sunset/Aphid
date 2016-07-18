@@ -42,7 +42,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
 
         do {
             let _ = try aphid.connect()
-            let _ = aphid.loop()
+            //let _ = aphid.ping()
             let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
             let _ = aphid.ping()
             let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
@@ -52,9 +52,9 @@ class AphidTests: XCTestCase, MQTTDelegate {
      
         }
         
-        sleep(10)
+        sleep(30)
         // Wait for completion
-        waitForExpectations(withTimeout: 10) {
+        waitForExpectations(withTimeout: 30) {
             error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")

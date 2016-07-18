@@ -16,7 +16,9 @@
 
 import Foundation
 import Socket
+import Dispatch
 
+public typealias Byte = UInt8
 
 public enum connectionStatus: Int {
     case connected = 1
@@ -24,35 +26,43 @@ public enum connectionStatus: Int {
     case connecting = 0
 }
 
-typealias Byte = UInt8
-
 // Aphid
 public class Aphid {
     
-    var host = "localhost"
-    var port: Int32 = 1883
-    var clientId: String
-    var username: String?
-    var password: String?
-    var secureMQTT: Bool = false
-    var cleanSess: Bool
+    public var host = "localhost"
+    public var port: Int32 = 1883
+    public var clientId: String
+    public var username: String?
+    public var password: String?
+    public var secureMQTT: Bool = false
+    public var cleanSess: Bool
+    public var keepAliveTime = 15
     
+    public var status = connectionStatus.disconnected
+    public var config: Config
+    
+    public var delegate: MQTTDelegate?
+
     var outMessages = [UInt16:ControlPacket]()
     var socket: Socket?
     
-    var delegate: MQTTDelegate?
-    
-    var buffer: [Byte] = []
-    
-    var status = connectionStatus.disconnected
-    var config: Config
+    var buffer = Data()
     
     var keepAliveTimer: DispatchSourceTimer? = nil
-    let timer = DispatchQueue(label: "timer")
-    let writeQueue = DispatchQueue(label: "write")
-    let readQueue = DispatchQueue(label: "readQueue")
     
-    var isConnected: Bool {
+    #if os(Linux)
+    public let readQueue: dispatch_queue_t
+    public let writeQueue: dispatch_queue_t
+    public let timerQueue: dispatch_queue_t
+
+    #else
+    public let readQueue: DispatchQueue
+    public let writeQueue: DispatchQueue
+    public let timerQueue: DispatchQueue
+    
+    #endif
+
+    public var isConnected: Bool {
         get {
             if status == .connected {
                 return true
@@ -62,7 +72,7 @@ public class Aphid {
         }
     }
     
-    init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
+    public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
          host: String = "localhost", port: Int32 = 1883) {
         
         !cleanSess && (clientId == "") ? (self.clientId = NSUUID().uuidString) : (self.clientId = clientId)
@@ -72,34 +82,19 @@ public class Aphid {
         self.password = password
         self.cleanSess = cleanSess
         
+        #if os(Linux)
+            readQueue = dispatch_queue_t(label: "timer queue", attributes: .concurrent)
+            writeQueue = dispatch_queue_t(label: "timer queue", attributes: .concurrent)
+            timerQueue = dispatch_queue_t(label: "timer queue", attributes: .concurrent)
+            
+        #else
+            readQueue = DispatchQueue(label: "read queue" , attributes: .concurrent)
+            writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
+            timerQueue = DispatchQueue(label: "timer queue", attributes: .concurrent)
+            
+        #endif
     }
     
-    public func loop() {
-        
-        readQueue.async {
-            while self.isConnected {
-                guard let _ = self.socket else {
-                    NSLog("Failure Socket has not initialized: Call .connect()")
-                    return
-                }
-                
-                do {
-                    let ready = try Socket.wait(for: [self.socket!], timeout: 1)
-                    
-                    if ready != nil {
-                        let _ = self.readSocket(self.socket!)
-                    }
-                    if self.buffer.count > 0 {
-                        let _ = self.parseBuffer()
-                    }
-                } catch {
-                    NSLog("Failure on Socket.wait")
-                    
-                }
-                
-            }
-        }
-    }
     // Initial Connect
     public func connect() throws -> Bool {
         
@@ -117,7 +112,8 @@ public class Aphid {
             
             try connectPacket.write(writer: sock)
             
-            
+            self.read()
+
         } catch {
             NSLog("Connection could not be made")
 
@@ -130,51 +126,11 @@ public class Aphid {
         return true
     }
     
-    func readSocket(_ reader: SocketReader) -> Int? {
-        do {
-            let tmpBuffer = NSMutableData(capacity: 128)
-            
-            let _ = try reader.read(into: tmpBuffer!)
-            
-            var bytes = [UInt8](repeating: 0, count: (tmpBuffer?.length)!)
-            
-            tmpBuffer?.getBytes(&bytes, length:(tmpBuffer?.length)! * sizeof(UInt8.self))
-            
-            self.buffer.append(contentsOf: bytes)
-            
-        } catch {
-            do { try delegate?.connectionLost() } catch {}
-            
-        }
-        
-        return nil
-    }
-    
-    func parseBuffer() -> ControlPacket {
-
-        let controlCode = buffer.removeFirst(), length = buffer.removeFirst()
-        
-        let bytes = [controlCode, length]
-        
-        let fixedHeader: FixedHeader = FixedHeader(bytes)!
-        
-        var body: [Byte] = []
-        for _ in 0..<length {
-            body.append(buffer.removeFirst())
-        }
-        
-        let packet = newControlPacket(header: fixedHeader, bytes: body)
-        
-        delegate?.deliveryComplete(token: (packet?.description)!)
-        
-        return packet!
-    }
-    
-    func reconnect() -> Bool {
+    public func reconnect() -> Bool {
         return true
     }
     
-    func disconnect(uint: UInt) throws {
+    public func disconnect(uint: UInt) throws {
         
         guard isConnected else {
             NSLog("Already Disconnected")
@@ -185,18 +141,37 @@ public class Aphid {
             disconnectPacket = newControlPacket(packetType: .disconnect) else {
                 throw NSError()
         }
-        writeQueue.sync {
-            do {try disconnectPacket.write(writer: sock)
-                
-                self.status = .disconnected
-                self.readQueue.suspend()
-                sock.close()
-                
-            }catch{ print("failure")}
-        }
+        #if os(Linux)
+            dispatch_sync(writeQueue) {
+                do {
+                    try disconnectPacket.write(writer: sock)
+                    
+                    self.status = .disconnected
+                    self.readQueue.suspend()
+                    sock.close()
+                    
+                } catch {
+                    NSLog("failure")
+                }
+            }
+        #else
+            writeQueue.sync {
+                do {
+                    try disconnectPacket.write(writer: sock)
+                    
+                    self.status = .disconnected
+                    self.readQueue.suspend()
+                    sock.close()
+                    
+                } catch {
+                    print("failure")
+                }
+            }
+        #endif
+       
     }
     
-    func publish(topic: String, withMessage message: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
+    public func publish(topic: String, withMessage message: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
         
         let unusedID: UInt16 = UInt16(random: true)
         
@@ -205,23 +180,40 @@ public class Aphid {
                 
                 return 0
         }
-        writeQueue.sync {
-            do {
-                try publishPacket.write(writer: sock)
-                
-                self.outMessages[unusedID] = publishPacket
-                
-                self.resetTimer()
-                
-                
-            } catch {
-                
+        #if os(Linux)
+            dispatch_sync(writeQueue) {
+                do {
+                    try publishPacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = publishPacket
+                    
+                    self.resetTimer()
+                    
+                    
+                } catch {
+                    
+                }
             }
-        }
+        #else
+            writeQueue.sync {
+                do {
+                    try publishPacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = publishPacket
+                    
+                    self.resetTimer()
+                    
+                    
+                } catch {
+                    
+                }
+            }
+        #endif
+       
         return 0
     }
     
-    func publish(topic: String, message: String) -> UInt16 {
+    public func publish(topic: String, message: String) -> UInt16 {
         
         let unusedID: UInt16 = UInt16(random: true)
         
@@ -230,23 +222,38 @@ public class Aphid {
                 
                 return 0
         }
-        writeQueue.sync {
-            do {
-                try publishPacket.write(writer: sock)
-                
-                self.outMessages[unusedID] = publishPacket
-                
-                self.resetTimer()
-                
-                
-            } catch {
-                
+        #if os(Linux)
+            dispatch_sync(writeQueue) {
+                do {
+                    try publishPacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = publishPacket
+                    
+                    self.resetTimer()
+                    
+                } catch {
+                    
+                }
             }
-        }
+        #else
+            writeQueue.sync {
+                do {
+                    try publishPacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = publishPacket
+                    
+                    self.resetTimer()
+                    
+                } catch {
+                    
+                }
+            }
+        #endif
+    
         return 1
     }
     
-    func subscribe(topic: [String], qoss: [qosType]) -> UInt16 {
+    public func subscribe(topic: [String], qoss: [qosType]) -> UInt16 {
         
         let unusedID: UInt16 = UInt16(random: true)
         
@@ -255,25 +262,38 @@ public class Aphid {
                 
                 return 0
         }
-        writeQueue.sync {
-            do {
-                try subscribePacket.write(writer: sock)
-                
-                self.outMessages[unusedID] = subscribePacket
-                
-                self.resetTimer()
-                
-                //return 1
-                
-            } catch {
-                
-                // return 0
+        #if os(Linux)
+            dispatch_sync(writeQueue) {
+                do {
+                    try unsubscribePacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = subscribePacket
+                    
+                    self.resetTimer()
+                    
+                } catch {
+                    
+                }
             }
-        }
+        #else
+            writeQueue.sync {
+                do {
+                    try subscribePacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = subscribePacket
+                    
+                    self.resetTimer()
+                    
+                } catch {
+                    
+                }
+            }
+        #endif
+        
         return 1
     }
     
-    func unsubscribe(topic: [String]) -> UInt16 {
+    public func unsubscribe(topic: [String]) -> UInt16 {
         
         let unusedID: UInt16 = UInt16(random: true)
         
@@ -282,54 +302,202 @@ public class Aphid {
                 
                 return 0
         }
-        writeQueue.sync {
-            do {
-                try unsubscribePacket.write(writer: sock)
-                
-                self.outMessages[unusedID] = unsubscribePacket
-                
-                self.resetTimer()
-                
-                //return 0
-                
-            } catch {
-                //return 0
-                
+        
+        #if os(Linux)
+            dispatch_sync(writeQueue) {
+                do {
+                    try unsubscribePacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = unsubscribePacket
+                    
+                    self.resetTimer()
+                    
+                } catch {
+                    
+                }
             }
-        }
+        #else
+            writeQueue.sync {
+                do {
+                    try unsubscribePacket.write(writer: sock)
+                    
+                    self.outMessages[unusedID] = unsubscribePacket
+                    
+                    self.resetTimer()
+                    
+                } catch {
+                    
+                }
+            }
+        #endif
+        
         return 1
     }
     
-    func ping() {
+    public func ping() {
         guard let sock = socket,
             pingreqPacket = newControlPacket(packetType: .pingreq) else {
                 
                 return
         }
-        writeQueue.sync {
-            do {
-                try pingreqPacket.write(writer: sock)
-                
-            } catch {
-                return
-                
+        #if os(Linux)
+            dispatch_sync(writeQueue) {
+                do {
+                    try pingreqPacket.write(writer: sock)
+                    
+                } catch {
+                    return
+                    
+                }
             }
-        }
+        #else
+            writeQueue.sync {
+                do {
+                    try pingreqPacket.write(writer: sock)
+                    
+                } catch {
+                    return
+                    
+                }
+            }
+        #endif
     }
-    func startTimer(){
-        if keepAliveTimer == nil {
-            keepAliveTimer = DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: timer)
-        }
-        keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: 1, leeway: .milliseconds(500))
-        keepAliveTimer?.setEventHandler {
-            self.ping()
-        }
-        keepAliveTimer?.resume()
-    }
-    func resetTimer(){
-        keepAliveTimer?.cancel()
-        keepAliveTimer = nil
-    }
-    
 }
 
+extension Aphid {
+    public func read() {
+        
+        
+        
+        guard let sock = socket else {
+            return
+        }
+        
+        #if os(Linux)
+            /*let iochannel = dispatch_io_create_with_path(DISPATCH_IO_STREAM,
+                                     sock.socketfd,
+                                     0,
+                                     O_RDONLY,
+                                     self.readQueue,
+                                     ^(int, error),{
+                                        // Cleanup code for normal channel operation.
+                                        // Assumes that dispatch_io_close was called elsewhere.
+                                        if (error == 0) {
+                                            dispatch_release(self.channel);
+                                        }
+                                    });
+            dispatch_io_read(iochannel, 1024, 1024, self.writeQueue,
+                            ^(bool done, dispatch_data_t data, int error){
+                                if (error == 0) {
+                                    let bytes: [Byte]? = data?.map {
+                                        byte in
+                                        return byte
+                                    }
+                                    
+                                    if let d = bytes {
+                                        
+                                        self.buffer.append(d, count: d.count)
+                                        
+                                        if self.buffer.count >= 2 {
+                                            let _ = self.parseBuffer()
+                                        }
+                                        
+                                        self.read()
+                                    }
+                                }
+                        });*/
+
+        #else
+            let iochannel = DispatchIO(type: DispatchIO.StreamType.stream, fileDescriptor: sock.socketfd, queue: readQueue, cleanupHandler: {
+                error in
+            })
+            
+            iochannel.read(offset: off_t(0), length: 1, queue: readQueue) {
+                done, data, error in
+                
+                let bytes: [Byte]? = data?.map {
+                    byte in
+                    return byte
+                }
+                
+                if let d = bytes {
+                    
+                    self.buffer.append(d, count: d.count)
+                    
+                    if self.buffer.count >= 2 {
+                        let _ = self.parseBuffer()
+                    }
+                    
+                    self.read()
+                }
+            }
+        #endif
+    }
+    func parseBuffer() -> [ControlPacket]? {
+        
+        var packets = [ControlPacket]()
+        
+        while buffer.count > 0 {
+            
+            guard let header = FixedHeader(buffer.subdata(in: Range(uncheckedBounds: (0, 2)))) else {
+                return packets
+            }
+            if buffer.count - header.remainingLength < 2 {
+                return nil
+            }
+            let body = buffer.subdata(in: Range(uncheckedBounds: (2, 2 + header.remainingLength)))
+
+            buffer = buffer.subdata(in: Range(uncheckedBounds: (2 + header.remainingLength, buffer.count)))
+            
+            let packet = newControlPacket(header: header, data: body)!
+
+            packets.append(packet)
+            
+            delegate?.deliveryComplete(token: packet.description)
+        }
+        
+        return packets
+    }
+}
+
+extension Aphid {
+    func startTimer(){
+        #if os(Linux)
+            keepAliveTimer = keepAliveTimer ?? dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, timerQueue)
+            dispatch_source_set_timer(keepAliveTimer, DISPATCH_TIME_NOW, keepAliveTime * NSEC_PER_SEC, 1 * NSEC_PER_SEC)
+            dispatch_source_set_event_handler(timer) {
+                
+                dispatch_async(writeQueue) {
+                    self.ping()
+                }
+
+            }
+        
+            dispatch_resume(timer)
+        #else
+            keepAliveTimer = keepAliveTimer ?? DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: timerQueue)
+            
+            keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(keepAliveTime), leeway: .milliseconds(500))
+            
+            keepAliveTimer?.setEventHandler {
+                
+                self.writeQueue.async {
+                    self.ping()
+                }
+            }
+            
+            keepAliveTimer?.resume()
+        #endif
+        
+    }
+    func resetTimer(){
+        #if os(Linux)
+            dispatch_source_cancel(keepAliveTimer)
+            timer = nil
+        #else
+            keepAliveTimer?.cancel()
+            keepAliveTimer = nil
+            startTimer()
+        #endif
+    }
+}

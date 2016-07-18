@@ -28,21 +28,15 @@ class ConnackPacket {
         self.responseCode = 0x00 // TEmporary
     }
 
-    init(header: FixedHeader, bytes: [Byte]) {
+    init(header: FixedHeader, data: Data) {
         self.header = header
-        flags = bytes[0]
-        responseCode = bytes[1]
+        flags = data[0]
+        responseCode = data[1]
     }
 
 }
 
 extension ConnackPacket: ControlPacket {
-    func printPacket() {
-        print("Connack Packet Information")
-        print(header.messageType)
-        print(flags)
-        print(responseCode)
-    }
     var description: String {
         return header.description
     }
@@ -55,6 +49,7 @@ extension ConnackPacket: ControlPacket {
         buffer.append(flags.data)
         buffer.append(responseCode.data)
         header.remainingLength = 2
+
         var packet = header.pack()
         packet.append(buffer)
 

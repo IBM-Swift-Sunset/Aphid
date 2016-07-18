@@ -27,20 +27,16 @@ class PubrelPacket {
         self.packetId = packetId
     }
     
-    init?(header: FixedHeader, bytes: [Byte]) {
+    init?(header: FixedHeader, data: Data) {
         self.header = header
-        packetId = UInt16(msb: bytes[0], lsb: bytes[1])
+        packetId = UInt16(msb: data[0], lsb: data[1])
     }
 }
 
 extension PubrelPacket : ControlPacket {
+
     var description: String {
         return header.description
-    }
-    func printPacket() {
-        print("Pubcomp Packet Information")
-        print(header.messageType)
-        print(packetId)
     }
     
     func write(writer: SocketWriter) throws {

@@ -29,6 +29,18 @@ class UnsubscribePacket {
         self.packetId = packetId
         self.topics = topics
     }
+    init(header: FixedHeader, data: Data) {
+        var data = data
+        
+        self.header = header
+        self.packetId = data.decodeUInt16
+        
+        var topics = [String]()
+        while data.count > 0 {
+            topics.append(data.decodeString)
+        }
+        self.topics = topics
+    }
 }
 
 extension UnsubscribePacket : ControlPacket {

@@ -44,32 +44,33 @@ class PublishPacket {
         self.payload = payload
     }
     
-    init?(header: FixedHeader, bytes: [Byte]) {
+    init?(header: FixedHeader, data: Data) {
+        var data = data
+
         self.header = header
-        var bytes = bytes
-        let strLen = UInt16(msb: bytes.removeFirst(), lsb: bytes.removeFirst())
-        var str: [Byte] = []
-        for _ in 0..<strLen{
-            str.append(bytes.removeFirst())
-        }
         
-        topicName = String(str)
         dup = header.dup
         qos = qosType(rawValue: header.qos)!
         willRetain = header.retain
+
+        var payloadSize = header.remainingLength
         
-        qos.rawValue > 0 ? (identifier = UInt16(msb: bytes.removeFirst(), lsb: bytes.removeFirst())) : (identifier = nil)
+        topicName = data.decodeString
         
-        var payload: [String] = []
-        while bytes.count > 0 {
-            let strLen = UInt16(msb: bytes.removeFirst(), lsb: bytes.removeFirst())
-            var str: [Byte] = []
-            for _ in 0..<strLen {
-                str.append(bytes.removeFirst())
-            }
-            payload.append(String(str))
+        if qos.rawValue > 0 {
+            identifier = data.decodeUInt16
+            payloadSize -= topicName.characters.count + 4
+
+        } else {
+            payloadSize -= topicName.characters.count + 2
         }
-        self.payload = payload
+
+        var messages = [String]()
+        
+        for _ in 0..<payloadSize {
+            messages.append(data.decodeString)
+        }
+        payload = messages
         
     }
 }

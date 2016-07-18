@@ -16,7 +16,7 @@
 
 import Foundation
 
-struct Config {
+public struct Config {
     var clientId:                String
     var username:                String?
     var password:                String?

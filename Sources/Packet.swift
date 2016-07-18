@@ -17,6 +17,13 @@
 import Foundation
 import Socket
 
+protocol ControlPacket {
+    var description: String { get }
+    func write(writer: SocketWriter) throws
+    func unpack(reader: SocketReader)
+    func validate() -> ErrorCodes
+}
+
 let PacketNames: [UInt8:String] = [
     1: "CONNECT",
     2: "CONNACK",
@@ -34,7 +41,7 @@ let PacketNames: [UInt8:String] = [
     14: "DISCONNECT"
 ]
 
-enum ControlCode: Byte {
+public enum ControlCode: Byte {
     case connect    = 0x10
     case connack    = 0x20
     case publish    = 0x30 // special case
@@ -52,7 +59,7 @@ enum ControlCode: Byte {
     case reserved   = 0xf0
 }
 
-enum ErrorCodes: Byte {
+public enum ErrorCodes: Byte {
     case accepted                       = 0x00
     case errRefusedBadProtocolVersion   = 0x01
     case errRefusedIDRejected           = 0x02
@@ -61,13 +68,13 @@ enum ErrorCodes: Byte {
     case errNotAuthorize                = 0x05
     case errUnknown                     = 0x06
 }
-enum qosType: Byte {
+public enum qosType: Byte {
     case atMostOnce = 0x00 // At Most One Delivery
     case atLeastOnce = 0x01 // At Least Deliver Once
     case exactlyOnce = 0x02 // Deliver Exactly Once
 }
 
-struct FixedHeader {
+public struct FixedHeader {
     let messageType: Byte
     var dup: Bool
     var qos: Byte
@@ -81,12 +88,12 @@ struct FixedHeader {
         retain = (messageType.rawValue & 0x01).bool
         remainingLength = 0
     }
-    init?(_ bytes: [Byte]){
-        self.messageType = UInt8(bytes[0] & 0xF0) >> 4
-        dup = ((bytes[0] & 0x08) >> 3).bool
-        qos = (bytes[0] & 0x06) >> 1
-        retain = (bytes[0] & 0x01).bool
-        remainingLength = Int(bytes[1])
+    init?(_ data: Data){
+        self.messageType = UInt8(data[0] & 0xF0) >> 4
+        dup = ((data[0] & 0x08) >> 3).bool
+        qos = (data[0] & 0x06) >> 1
+        retain = (data[0] & 0x01).bool
+        remainingLength = Int(data[1])
     }
 
     func pack() -> Data {
@@ -103,7 +110,10 @@ struct FixedHeader {
 
 extension FixedHeader: CustomStringConvertible {
 
-    var description: String {
+   public var description: String {
+        return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain) remainingLength \(remainingLength)"
+    }
+    var desc: String {
         return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain) remainingLength \(remainingLength)"
     }
 
@@ -145,32 +155,32 @@ extension Aphid {
             return nil
         }
     }
-    func newControlPacket(header: FixedHeader, bytes: [Byte]) -> ControlPacket? {
+    func newControlPacket(header: FixedHeader, data: Data) -> ControlPacket? {
         let code: ControlCode = ControlCode(rawValue: (header.messageType << 4))!
         switch code {
         
-        /*case .connect:
-            return ConnectPacket(header: header, bytes: bytes)*/
+        case .connect:
+            return ConnectPacket(header: header, data: data)
         case .connack:
-            return ConnackPacket(header: header, bytes: bytes)
-        /*case .publish:
-            return PublishPacket(header: header, bytes: bytes)*/
+            return ConnackPacket(header: header, data: data)
+        case .publish:
+            return PublishPacket(header: header, data: data)
         case .puback:
-            return PubackPacket(header: header, bytes: bytes)
+            return PubackPacket(header: header, data: data)
         case .pubrec:
-            return PubrecPacket(header: header, bytes: bytes)
+            return PubrecPacket(header: header, data: data)
         case .pubrel:
-            return PubrelPacket(header: header, bytes: bytes)
+            return PubrelPacket(header: header, data: data)
         case .pubcomp:
-            return PubcompPacket(header: header, bytes: bytes)
-        /*case .subscribe:
-            return SubscribePacket(header: header, bytes: bytes) */
+            return PubcompPacket(header: header, data: data)
+        case .subscribe:
+            return SubscribePacket(header: header, data: data)
         case .suback:
-            return SubackPacket(header: header, bytes: bytes)
-        /*case .unsubscribe:
-            return UnsubscribePacket(header: header, bytes: bytes)*/
+            return SubackPacket(header: header, data: data)
+        case .unsubscribe:
+            return UnsubscribePacket(header: header, data: data)
         case .unsuback:
-            return UnSubackPacket(header: header, bytes: bytes)
+            return UnSubackPacket(header: header, data: data)
         case .pingreq:
             return PingreqPacket(header: header)
         case .pingresp:
@@ -178,7 +188,7 @@ extension Aphid {
         case .disconnect:
             return DisconnectPacket(header: header)
         default:
-            return ConnackPacket(header: header, bytes: bytes)
+            return ConnackPacket(header: header, data: data)
         }
     }
 }
@@ -276,6 +286,10 @@ extension UInt8 {
         return self == 0x01 ? true : false
     }
     
+    var int: Int {
+        return Int(self)
+    }
+
     subscript(index: Int) -> UInt8 { //Returns a byte with only the index bit set if applicable
         return 0
     }
@@ -321,7 +335,30 @@ extension UInt16 {
         }
     }
 }
-
+extension Data {
+    var decodeUInt8: UInt8 {
+        mutating get {
+            let uint = UInt8(self[0])
+            self = self.subdata(in: Range(uncheckedBounds: (1, self.count)))
+            return uint
+        }
+    }
+    var decodeUInt16: UInt16 {
+        mutating get {
+            let uint = UInt16(msb: self[0], lsb: self[1])
+            self = self.subdata(in: Range(uncheckedBounds: (2,self.count)))
+            return uint
+        }
+    }
+    var decodeString: String {
+        mutating get {
+            let length = UInt16(msb: self[0], lsb: self[1])
+            let str = self.subdata(in: Range(uncheckedBounds: (2, 2 + Int(length))))
+            self = self.subdata(in: Range(uncheckedBounds: (2 + Int(length), self.count)))
+            return String(str)
+        }
+    }
+}
 
 func getBytes(_ value: Data) {
     value.enumerateBytes() {
