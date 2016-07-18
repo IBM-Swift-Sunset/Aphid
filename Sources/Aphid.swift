@@ -50,17 +50,9 @@ public class Aphid {
 
     var keepAliveTimer: DispatchSourceTimer? = nil
 
-    #if os(Linux)
-    public let readQueue: dispatch_queue_t
-    public let writeQueue: dispatch_queue_t
-    public let timerQueue: dispatch_queue_t
-
-    #else
     public let readQueue: DispatchQueue
     public let writeQueue: DispatchQueue
     public let timerQueue: DispatchQueue
-
-    #endif
 
     public var isConnected: Bool {
         get {
@@ -84,17 +76,10 @@ public class Aphid {
         self.password = password
         self.cleanSess = cleanSess
 
-        #if os(Linux)
-            readQueue = dispatch_queue_t(label: "timer queue", attributes: .concurrent)
-            writeQueue = dispatch_queue_t(label: "timer queue", attributes: .concurrent)
-            timerQueue = dispatch_queue_t(label: "timer queue", attributes: .concurrent)
+        readQueue = DispatchQueue(label: "read queue", attributes: .concurrent)
+        writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
+        timerQueue = DispatchQueue(label: "timer queue", attributes: .concurrent)
 
-        #else
-            readQueue = DispatchQueue(label: "read queue", attributes: .concurrent)
-            writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
-            timerQueue = DispatchQueue(label: "timer queue", attributes: .concurrent)
-
-        #endif
     }
 
     // Initial Connect
@@ -143,34 +128,19 @@ public class Aphid {
               var disconnectPacket = newControlPacket(packetType: .disconnect) else {
                 throw NSError()
         }
-        #if os(Linux)
-            dispatch_sync(writeQueue) {
-                do {
-                    try disconnectPacket.write(writer: sock)
 
-                    self.status = .disconnected
-                    self.readQueue.suspend()
-                    sock.close()
+        writeQueue.sync {
+            do {
+                try disconnectPacket.write(writer: sock)
 
-                } catch {
-                    NSLog("failure")
-                }
+                self.status = .disconnected
+                self.readQueue.suspend()
+                sock.close()
+
+            } catch {
+                NSLog("failure")
             }
-        #else
-            writeQueue.sync {
-                do {
-                    try disconnectPacket.write(writer: sock)
-
-                    self.status = .disconnected
-                    self.readQueue.suspend()
-                    sock.close()
-
-                } catch {
-                    NSLog("failure")
-                }
-            }
-        #endif
-
+        }
     }
 
     public func publish(topic: String, withMessage message: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
@@ -182,37 +152,21 @@ public class Aphid {
 
                 return 0
         }
-        #if os(Linux)
-            dispatch_sync(writeQueue) {
-                do {
-                    try publishPacket.write(writer: sock)
+        writeQueue.sync {
+            do {
+                try publishPacket.write(writer: sock)
 
-                    self.outMessages[unusedID] = publishPacket
+                self.outMessages[unusedID] = publishPacket
 
-                    self.resetTimer()
+                self.resetTimer()
 
 
-                } catch {
+            } catch {
 
-                }
             }
-        #else
-            writeQueue.sync {
-                do {
-                    try publishPacket.write(writer: sock)
+        }
 
-                    self.outMessages[unusedID] = publishPacket
-
-                    self.resetTimer()
-
-
-                } catch {
-
-                }
-            }
-        #endif
-
-        return 0
+        return 1
     }
 
     public func publish(topic: String, message: String) -> UInt16 {
@@ -224,33 +178,19 @@ public class Aphid {
 
                 return 0
         }
-        #if os(Linux)
-            dispatch_sync(writeQueue) {
-                do {
-                    try publishPacket.write(writer: sock)
 
-                    self.outMessages[unusedID] = publishPacket
+        writeQueue.sync {
+            do {
+                try publishPacket.write(writer: sock)
 
-                    self.resetTimer()
+                self.outMessages[unusedID] = publishPacket
 
-                } catch {
+                self.resetTimer()
 
-                }
+            } catch {
+
             }
-        #else
-            writeQueue.sync {
-                do {
-                    try publishPacket.write(writer: sock)
-
-                    self.outMessages[unusedID] = publishPacket
-
-                    self.resetTimer()
-
-                } catch {
-
-                }
-            }
-        #endif
+        }
 
         return 1
     }
@@ -264,33 +204,19 @@ public class Aphid {
 
                 return 0
         }
-        #if os(Linux)
-            dispatch_sync(writeQueue) {
-                do {
-                    try unsubscribePacket.write(writer: sock)
 
-                    self.outMessages[unusedID] = subscribePacket
+        writeQueue.sync {
+            do {
+                try subscribePacket.write(writer: sock)
 
-                    self.resetTimer()
+                self.outMessages[unusedID] = subscribePacket
 
-                } catch {
+                self.resetTimer()
 
-                }
+            } catch {
+
             }
-        #else
-            writeQueue.sync {
-                do {
-                    try subscribePacket.write(writer: sock)
-
-                    self.outMessages[unusedID] = subscribePacket
-
-                    self.resetTimer()
-
-                } catch {
-
-                }
-            }
-        #endif
+        }
 
         return 1
     }
@@ -305,33 +231,18 @@ public class Aphid {
                 return 0
         }
 
-        #if os(Linux)
-            dispatch_sync(writeQueue) {
-                do {
-                    try unsubscribePacket.write(writer: sock)
+        writeQueue.sync {
+            do {
+                try unsubscribePacket.write(writer: sock)
 
-                    self.outMessages[unusedID] = unsubscribePacket
+                self.outMessages[unusedID] = unsubscribePacket
 
-                    self.resetTimer()
+                self.resetTimer()
 
-                } catch {
+            } catch {
 
-                }
             }
-        #else
-            writeQueue.sync {
-                do {
-                    try unsubscribePacket.write(writer: sock)
-
-                    self.outMessages[unusedID] = unsubscribePacket
-
-                    self.resetTimer()
-
-                } catch {
-
-                }
-            }
-        #endif
+        }
 
         return 1
     }
@@ -342,27 +253,16 @@ public class Aphid {
 
                 return
         }
-        #if os(Linux)
-            dispatch_sync(writeQueue) {
-                do {
-                    try pingreqPacket.write(writer: sock)
 
-                } catch {
-                    return
+        writeQueue.sync {
+            do {
+                try pingreqPacket.write(writer: sock)
 
-                }
+            } catch {
+                return
+
             }
-        #else
-            writeQueue.sync {
-                do {
-                    try pingreqPacket.write(writer: sock)
-
-                } catch {
-                    return
-
-                }
-            }
-        #endif
+        }
     }
 }
 
@@ -373,62 +273,30 @@ extension Aphid {
         guard let sock = socket else {
             return
         }
+        
+        let iochannel = DispatchIO(type: DispatchIO.StreamType.stream, fileDescriptor: sock.socketfd, queue: readQueue, cleanupHandler: {
+            error in
+        })
 
-        #if os(Linux)
-            let iochannel = dispatch_io_create_with_path(DISPATCH_IO_STREAM, sock.socket.fd,
-                                                       0, O_RDONLY, self.readQueue,
-                                                       ^(error) {
+        iochannel.read(offset: off_t(0), length: 1, queue: readQueue) {
+            done, data, error in
 
-                                                        if (error == 0) {
-                                                            dispatch_release(self.channel)
-                                                        }
-                })
-            dispatch_io_read(iochannel, 0, SIZE_MAX, self.writeQueue,
-                            ^(done, data, error) {
-                                if (error == 0) {
-                                    let bytes: [Byte]? = data?.map {
-                                        byte in
-                                        return byte
-                                    }
-
-                                    if let d = bytes {
-
-                                        self.buffer.append(d, count: d.count)
-
-                                        if self.buffer.count >= 2 {
-                                            let _ = self.parseBuffer()
-                                        }
-
-                                        self.read()
-                                    }
-                                }
-                        })
-
-        #else
-            let iochannel = DispatchIO(type: DispatchIO.StreamType.stream, fileDescriptor: sock.socketfd, queue: readQueue, cleanupHandler: {
-                error in
-            })
-
-            iochannel.read(offset: off_t(0), length: 1, queue: readQueue) {
-                done, data, error in
-
-                let bytes: [Byte]? = data?.map {
-                    byte in
-                    return byte
-                }
-
-                if let d = bytes {
-
-                    self.buffer.append(d, count: d.count)
-
-                    if self.buffer.count >= 2 {
-                        let _ = self.unpack()
-                    }
-
-                    self.read()
-                }
+            let bytes: [Byte]? = data?.map {
+                byte in
+                return byte
             }
-        #endif
+
+            if let d = bytes {
+
+                self.buffer.append(d, count: d.count)
+
+                if self.buffer.count >= 2 {
+                    let _ = self.unpack()
+                }
+
+                self.read()
+            }
+        }
     }
 
     func unpack() -> [ControlPacket]? {
@@ -476,43 +344,25 @@ extension Aphid {
 extension Aphid {
 
     func startTimer() {
-        #if os(Linux)
-            keepAliveTimer = keepAliveTimer ?? dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, timerQueue)
-            dispatch_source_set_timer(keepAliveTimer, DISPATCH_TIME_NOW, keepAliveTime * NSEC_PER_SEC, 1 * NSEC_PER_SEC)
-            dispatch_source_set_event_handler(timer) {
 
-                dispatch_async(writeQueue) {
-                    self.ping()
-                }
+        keepAliveTimer = keepAliveTimer ?? DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: timerQueue)
 
+        keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(keepAliveTime), leeway: .milliseconds(500))
+
+        keepAliveTimer?.setEventHandler {
+
+            self.writeQueue.async {
+                self.ping()
             }
+        }
 
-            dispatch_resume(timer)
-        #else
-            keepAliveTimer = keepAliveTimer ?? DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: timerQueue)
-
-            keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(keepAliveTime), leeway: .milliseconds(500))
-
-            keepAliveTimer?.setEventHandler {
-
-                self.writeQueue.async {
-                    self.ping()
-                }
-            }
-
-            keepAliveTimer?.resume()
-        #endif
+        keepAliveTimer?.resume()
 
     }
 
     func resetTimer() {
-        #if os(Linux)
-            dispatch_source_cancel(keepAliveTimer)
-            timer = nil
-        #else
-            keepAliveTimer?.cancel()
-            keepAliveTimer = nil
-            startTimer()
-        #endif
+        keepAliveTimer?.cancel()
+        keepAliveTimer = nil
+        startTimer()
     }
 }
