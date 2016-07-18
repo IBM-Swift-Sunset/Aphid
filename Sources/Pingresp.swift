@@ -18,7 +18,7 @@ import Foundation
 import Socket
 
 
-class PingrespPacket {
+struct PingrespPacket {
     let header: FixedHeader
 
     init(header: FixedHeader) {
@@ -31,12 +31,12 @@ extension PingrespPacket: ControlPacket {
         return header.description
     }
 
-    func write(writer: SocketWriter) throws {
+    mutating func write(writer: SocketWriter) throws {
         let packet = header.pack()
         try writer.write(from: packet)
     }
 
-    func unpack(reader: SocketReader) {
+    mutating func unpack(reader: SocketReader) {
     }
 
     func validate() -> ErrorCodes {

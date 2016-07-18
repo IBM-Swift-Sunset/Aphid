@@ -18,7 +18,7 @@
 import Foundation
 import Socket
 
-class SubackPacket {
+struct SubackPacket {
     var header: FixedHeader
     var packetId: UInt16
     var returnCode: Byte
@@ -43,7 +43,7 @@ extension SubackPacket : ControlPacket {
         return "\(header.description) | ID: \(packetId)"
     }
     
-    func write(writer: SocketWriter) throws {
+    mutating func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 128) else {
             throw NSError()
         }
@@ -64,21 +64,10 @@ extension SubackPacket : ControlPacket {
         }
     }
     
-    func unpack(reader: SocketReader) {
-        packetId = decodeUInt16(reader)
+    mutating func unpack(reader: SocketReader) {
     }
     
     func validate() -> ErrorCodes {
         return .accepted
     }
-}
-
-func subackPacket(reader: SocketReader) {
-    let code = decodeUInt8(reader)
-    let length = decodeUInt8(reader)
-    let packetId = decodeUInt16(reader)
-    
-    print("Puback Packet Information -- in Int form")
-    print("Code \(code)   | Length \(length)")
-    print("packetId \(packetId)")
 }

@@ -17,7 +17,7 @@
 import Foundation
 import Socket
 
-class PublishPacket {
+struct PublishPacket {
     var header: FixedHeader
     let dup: Bool
     let qos: qosType
@@ -28,7 +28,7 @@ class PublishPacket {
 
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
         
-        topicName: String, packetId: UInt16, payload: [String] = ["This plant needs water"]) {
+        topicName: String, packetId: UInt16, payload: [String] = []) {
         
         var header = header
         header.dup = dup
@@ -67,8 +67,10 @@ class PublishPacket {
 
         var messages = [String]()
         
-        for _ in 0..<payloadSize {
-            messages.append(data.decodeString)
+        while data.count > 1 {
+            let str = data.decodeString
+            messages.append(str)
+            payloadSize -= str.characters.count
         }
         payload = messages
         
@@ -76,10 +78,12 @@ class PublishPacket {
 }
 
 extension PublishPacket: ControlPacket {
+
     var description: String {
         return header.description
     }
-    func write(writer: SocketWriter) throws {
+
+    mutating func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
@@ -93,7 +97,8 @@ extension PublishPacket: ControlPacket {
         for item in payload {
             buffer.append(item.data)
         }
-        header.remainingLength = buffer.count + payload.count //payload count cant be pstring
+
+        header.remainingLength = buffer.count + payload.count
 
         var packet = header.pack()
         packet.append(buffer)
@@ -108,21 +113,7 @@ extension PublishPacket: ControlPacket {
 
     }
 
-    func unpack(reader: SocketReader) {
-        var payloadSize = header.remainingLength
-        topicName = decodeString(reader)
-        if qos.rawValue > 0 {
-            identifier = decodeUInt16(reader)
-            payloadSize -= topicName.characters.count + 4
-        } else {
-            payloadSize -= topicName.characters.count + 2
-        }
-        var payload = [String]()
-
-        for _ in 0..<payloadSize {
-            payload.append(decodeString(reader))
-        }
-
+    mutating func unpack(reader: SocketReader) {
     }
 
     func validate() -> ErrorCodes {

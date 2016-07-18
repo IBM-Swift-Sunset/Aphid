@@ -17,7 +17,7 @@
 import Foundation
 import Socket
 
-class ConnectPacket {
+struct ConnectPacket {
 
     var header: FixedHeader
     var protocolName: String
@@ -110,7 +110,8 @@ extension ConnectPacket : ControlPacket {
     var description: String {
         return header.description
     }
-    func write(writer: SocketWriter) throws {
+
+    mutating func write(writer: SocketWriter) throws {
 
         guard var buffer = Data(capacity: 512) else {
             throw NSError()
@@ -149,35 +150,7 @@ extension ConnectPacket : ControlPacket {
 
     }
 
-    func unpack(reader: SocketReader) {
-        self.protocolName = decodeString(reader)
-        self.protocolVersion = decodeUInt8(reader)
-        let options = decodeUInt8(reader)
-
-        self.reservedBit  = (1 & options).bool
-        self.cleanSession = (1 & (options >> 1)).bool
-        self.willFlag     = (1 & (options >> 2)).bool
-        self.willQoS      = qosType(rawValue: 3 & (options >> 3))!
-        self.willRetain   = (1 & (options >> 5)).bool
-        self.usernameFlag = (1 & (options >> 6)).bool
-        self.passwordFlag = (1 & (options >> 7)).bool
-
-        self.keepAlive = decodeUInt16(reader)
-
-        //Payload
-        self.clientId = decodeString(reader)
-
-        if willFlag {
-            self.willTopic = decodeString(reader)
-            self.willMessage = decodeString(reader)
-        }
-        if usernameFlag {
-            self.username = decodeString(reader)
-        }
-        if passwordFlag {
-            self.password = decodeString(reader)
-        }
-
+    mutating func unpack(reader: SocketReader) {
     }
 
     func validate() -> ErrorCodes {

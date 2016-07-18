@@ -43,10 +43,14 @@ class AphidTests: XCTestCase, MQTTDelegate {
         do {
             let _ = try aphid.connect()
             //let _ = aphid.ping()
-            let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
-            let _ = aphid.ping()
+            //let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
+            //let _ = aphid.ping()
             let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
-            let _ = aphid.unsubscribe(topic: ["/basilplant/"])
+            let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
+            //let _ = aphid.unsubscribe(topic: ["/basilplant/"])
+            while true {
+                
+            }
 
         } catch {
      
@@ -85,8 +89,8 @@ class AphidTests: XCTestCase, MQTTDelegate {
     }
     
     func messageArrived(topic: String, message: String) throws {
-        expectation1.fulfill()
-        print("Message Arrived")
+        //expectation1.fulfill()
+        print(topic, message)
     }
 
     static var allTests : [(String, (AphidTests) -> () throws -> Void)] {

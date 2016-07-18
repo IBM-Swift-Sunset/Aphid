@@ -18,7 +18,7 @@ import Foundation
 import Socket
 
 
-class PingreqPacket {
+struct PingreqPacket {
     let header: FixedHeader
 
     init(header: FixedHeader) {
@@ -31,16 +31,18 @@ extension PingreqPacket: ControlPacket {
         return header.description
     }
 
-    func write(writer: SocketWriter) throws {
+    mutating func write(writer: SocketWriter) throws {
         let packet = header.pack()
         do {
             try writer.write(from: packet)
+
         } catch {
-            print(error)
+            NSLog(String(error))
+
         }
     }
 
-    func unpack(reader: SocketReader) {
+    mutating func unpack(reader: SocketReader) {
     }
 
     func validate() -> ErrorCodes {

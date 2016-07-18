@@ -18,7 +18,7 @@
 import Foundation
 import Socket
 
-class UnSubackPacket {
+struct UnSubackPacket {
     var header: FixedHeader
     var packetId: UInt16
     
@@ -34,11 +34,12 @@ class UnSubackPacket {
 }
 
 extension UnSubackPacket : ControlPacket {
+
     var description: String {
         return "\(header.description) | ID: \(packetId)"
     }
     
-    func write(writer: SocketWriter) throws {
+    mutating func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 128) else {
             throw NSError()
         }
@@ -59,8 +60,7 @@ extension UnSubackPacket : ControlPacket {
         }
     }
     
-    func unpack(reader: SocketReader) {
-        packetId = decodeUInt16(reader)
+    mutating func unpack(reader: SocketReader) {
     }
     
     func validate() -> ErrorCodes {

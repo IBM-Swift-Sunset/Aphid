@@ -101,7 +101,7 @@ public class Aphid {
         socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
         
         guard let sock = socket,
-            connectPacket = newControlPacket(packetType: .connect) else {
+              var connectPacket = newControlPacket(packetType: .connect) else {
                 
                 throw NSError()
         }
@@ -138,7 +138,7 @@ public class Aphid {
         }
         
         guard let sock = socket,
-            disconnectPacket = newControlPacket(packetType: .disconnect) else {
+              var disconnectPacket = newControlPacket(packetType: .disconnect) else {
                 throw NSError()
         }
         #if os(Linux)
@@ -164,7 +164,7 @@ public class Aphid {
                     sock.close()
                     
                 } catch {
-                    print("failure")
+                    NSLog("failure")
                 }
             }
         #endif
@@ -176,7 +176,7 @@ public class Aphid {
         let unusedID: UInt16 = UInt16(random: true)
         
         guard let sock = socket,
-            publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: [message]) else {
+              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: [message]) else {
                 
                 return 0
         }
@@ -218,7 +218,7 @@ public class Aphid {
         let unusedID: UInt16 = UInt16(random: true)
         
         guard let sock = socket,
-            publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: [message]) else {
+              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: [message]) else {
                 
                 return 0
         }
@@ -258,7 +258,7 @@ public class Aphid {
         let unusedID: UInt16 = UInt16(random: true)
         
         guard let sock = socket,
-            subscribePacket = newControlPacket(packetType: .subscribe, packetId: unusedID, topics: topic, qoss: qoss) else {
+              var subscribePacket = newControlPacket(packetType: .subscribe, packetId: unusedID, topics: topic, qoss: qoss) else {
                 
                 return 0
         }
@@ -298,7 +298,7 @@ public class Aphid {
         let unusedID: UInt16 = UInt16(random: true)
         
         guard let sock = socket,
-            unsubscribePacket = newControlPacket(packetType: .unsubscribe, packetId: unusedID, topics: topic) else {
+              var unsubscribePacket = newControlPacket(packetType: .unsubscribe, packetId: unusedID, topics: topic) else {
                 
                 return 0
         }
@@ -336,7 +336,7 @@ public class Aphid {
     
     public func ping() {
         guard let sock = socket,
-            pingreqPacket = newControlPacket(packetType: .pingreq) else {
+              var pingreqPacket = newControlPacket(packetType: .pingreq) else {
                 
                 return
         }
@@ -445,14 +445,23 @@ extension Aphid {
             if buffer.count - header.remainingLength < 2 {
                 return nil
             }
+
             let body = buffer.subdata(in: Range(uncheckedBounds: (2, 2 + header.remainingLength)))
 
             buffer = buffer.subdata(in: Range(uncheckedBounds: (2 + header.remainingLength, buffer.count)))
-            
+
             let packet = newControlPacket(header: header, data: body)!
 
             packets.append(packet)
-            
+            if packet is PublishPacket {
+                let p = packet as! PublishPacket
+
+                do {
+                    try delegate?.messageArrived(topic: p.topicName, message: p.payload[0])
+                } catch {
+                    
+                }
+            }
             delegate?.deliveryComplete(token: packet.description)
         }
         

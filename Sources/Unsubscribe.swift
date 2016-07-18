@@ -18,7 +18,7 @@
 import Foundation
 import Socket
 
-class UnsubscribePacket {
+struct UnsubscribePacket {
     var header: FixedHeader
     var packetId: UInt16
     var topics: [String]
@@ -44,10 +44,12 @@ class UnsubscribePacket {
 }
 
 extension UnsubscribePacket : ControlPacket {
+
     var description: String {
         return header.description
     }
-    func write(writer: SocketWriter) throws {
+
+    mutating func write(writer: SocketWriter) throws {
 
         guard var buffer = Data(capacity: 512) else {
             throw NSError()
@@ -71,9 +73,10 @@ extension UnsubscribePacket : ControlPacket {
 
         }
     }
-    func unpack(reader: SocketReader) {
 
+    mutating func unpack(reader: SocketReader) {
     }
+
     func validate() -> ErrorCodes {
         return .accepted
     }

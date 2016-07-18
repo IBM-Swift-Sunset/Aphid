@@ -19,8 +19,8 @@ import Socket
 
 protocol ControlPacket {
     var description: String { get }
-    func write(writer: SocketWriter) throws
-    func unpack(reader: SocketReader)
+    mutating func write(writer: SocketWriter) throws
+    mutating func unpack(reader: SocketReader)
     func validate() -> ErrorCodes
 }
 
@@ -113,10 +113,6 @@ extension FixedHeader: CustomStringConvertible {
    public var description: String {
         return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain) remainingLength \(remainingLength)"
     }
-    var desc: String {
-        return "\(messageType): dup: \(dup) qos: \(qos) retain \(retain) remainingLength \(remainingLength)"
-    }
-
 }
 
 extension Aphid {
@@ -220,7 +216,6 @@ extension String {
             var array = Data()
 
             let utf = self.data(using: String.Encoding.utf8)!
-
             array.append(UInt16(utf.count).data)
             array.append(utf)
 
@@ -355,10 +350,12 @@ extension Data {
             let length = UInt16(msb: self[0], lsb: self[1])
             let str = self.subdata(in: Range(uncheckedBounds: (2, 2 + Int(length))))
             self = self.subdata(in: Range(uncheckedBounds: (2 + Int(length), self.count)))
-            return String(str)
+            return String(data: str, encoding: String.Encoding.utf8)!
         }
     }
 }
+
+// Unused Helper Functions
 
 func getBytes(_ value: Data) {
     value.enumerateBytes() {
@@ -381,6 +378,7 @@ func decodeString(_ reader: SocketReader) -> String {
     }
     return String(field)
 }
+
 func decodeUInt8(_ reader: SocketReader) -> UInt8 {
     let num = NSMutableData(capacity: 1)
     do {
@@ -390,6 +388,7 @@ func decodeUInt8(_ reader: SocketReader) -> UInt8 {
     }
     return decode(num!)
 }
+
 func decodeUInt16(_ reader: SocketReader) -> UInt16 {
     let uint = NSMutableData(capacity: 2)
     do {
@@ -399,11 +398,13 @@ func decodeUInt16(_ reader: SocketReader) -> UInt16 {
     }
     return decode(uint!)
 }
+
 public func decode<T>(_ data: NSData) -> T {
     let pointer = UnsafeMutablePointer<T>(allocatingCapacity: sizeof(T.self))
     data.getBytes(pointer, length: sizeof(T.self))
     return pointer.move()
 }
+
 func decodeLength(_ bytes: [Byte]) -> Int {
     var rLength: UInt32 = 0
     var multiplier: UInt32 = 0

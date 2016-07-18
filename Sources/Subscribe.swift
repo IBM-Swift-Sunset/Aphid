@@ -18,7 +18,7 @@
 import Foundation
 import Socket
 
-class SubscribePacket {
+struct SubscribePacket {
     var header: FixedHeader //bits 3,2,1,0 --> 0,0,1 and 0 respectively
     var packetId: UInt16
     var topics: [String]
@@ -50,10 +50,12 @@ class SubscribePacket {
 }
 
 extension SubscribePacket : ControlPacket {
+
     var description: String {
         return header.description
     }
-    func write(writer: SocketWriter) throws {
+
+    mutating func write(writer: SocketWriter) throws {
        guard var buffer = Data(capacity: 512) else {
             throw NSError()
         }
@@ -79,15 +81,8 @@ extension SubscribePacket : ControlPacket {
         }
 
     }
-    func unpack(reader: SocketReader) {
-        self.packetId = decodeUInt16(reader)
-        var topics = [String]()
-        var qoss = [qosType]()
-        for _ in 0...10 {
-            topics.append(decodeString(reader))
-            qoss.append(qosType(rawValue: decodeUInt8(reader))!)
-        }
 
+    mutating func unpack(reader: SocketReader) {
     }
     func validate() -> ErrorCodes {
         return .accepted

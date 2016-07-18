@@ -17,7 +17,7 @@
 import Foundation
 import Socket
 
-class ConnackPacket {
+struct ConnackPacket {
     var header: FixedHeader
     var flags: Byte
     var responseCode: Byte
@@ -37,10 +37,12 @@ class ConnackPacket {
 }
 
 extension ConnackPacket: ControlPacket {
+
     var description: String {
         return header.description
     }
-    func write(writer: SocketWriter) throws {
+
+    mutating func write(writer: SocketWriter) throws {
 
         guard var buffer = Data(capacity: 128) else {
             throw NSError()
@@ -61,14 +63,11 @@ extension ConnackPacket: ControlPacket {
 
         }
     }
-    func unpack(reader: SocketReader) {
-        flags = decodeUInt8(reader)
-        responseCode = decodeUInt8(reader)
+
+    mutating func unpack(reader: SocketReader) {
     }
+
     func validate() -> ErrorCodes {
-        // ------ Response Codes ----- //
-        // 0 - Accepted | 1 - Unacceptable Protocol | 2 - Identifier Invalid | 3  - Server Unavailable
-        // 4 - Bad Username/Password | 5 - Not Authorized
 
         switch responseCode {
         case 0: return .accepted
@@ -80,14 +79,4 @@ extension ConnackPacket: ControlPacket {
         default: return .errUnknown
         }
     }
-}
-func parseConnack(reader: SocketReader) {
-    let code = UInt8(reader)
-    let length = UInt8(reader)
-    let flags = UInt8(reader)
-    let responseCode = UInt8(reader)
-
-    print("Connack Packet Information -- in Int form")
-    print("Code \(code)   | Length \(length)")
-    print("Flags \(flags) | Response \(responseCode)")
 }
