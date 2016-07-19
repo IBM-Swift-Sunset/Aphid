@@ -126,10 +126,10 @@ extension FixedHeader: CustomStringConvertible {
 
 extension Aphid {
     func newControlPacket(packetType: ControlCode, topicName: String? = nil, packetId: UInt16? = nil,
-                          topics: [String]? = nil, qoss: [qosType]? = nil, message: [String]? = nil, returnCode: Byte? = nil) -> ControlPacket? {
+                          topics: [String]? = nil, qoss: [qosType]? = nil, message: String? = nil, returnCode: Byte? = nil) -> ControlPacket? {
         switch packetType {
         case .connect:
-            return ConnectPacket(header: FixedHeader(messageType: .connect), clientId: clientId )
+            return ConnectPacket(header: FixedHeader(messageType: .connect), clientId: clientId, will: will)
         case .connack:
             return ConnackPacket(header: FixedHeader(messageType: .connack))
         case .publish:
@@ -227,6 +227,15 @@ extension String {
 
         return array
     }
+
+    var sData: Data {
+        var array = Data()
+        
+        let utf = self.data(using: String.Encoding.utf8)!
+        array.append(utf)
+        
+        return array
+    }
 }
 
 extension Int {
@@ -302,24 +311,27 @@ extension Data {
     var decodeUInt8: UInt8 {
         mutating get {
             let uint = UInt8(self[0])
-            self = self.subdata(in: Range(uncheckedBounds: (1, self.count)))
+            self = self.subdata(in: Range(1..<self.count))
             return uint
         }
     }
     var decodeUInt16: UInt16 {
         mutating get {
             let uint = UInt16(msb: self[0], lsb: self[1])
-            self = self.subdata(in: Range(uncheckedBounds: (2, self.count)))
+            self = self.subdata(in: Range(2..<self.count))
             return uint
         }
     }
     var decodeString: String {
         mutating get {
             let length = UInt16(msb: self[0], lsb: self[1])
-            let str = self.subdata(in: Range(uncheckedBounds: (2, 2 + Int(length))))
-            self = self.subdata(in: Range(uncheckedBounds: (2 + Int(length), self.count)))
+            let str = self.subdata(in: Range(2..<2 + Int(length)))
+            self = self.subdata(in: Range(2 + Int(length)..<self.count))
             return String(data: str, encoding: String.Encoding.utf8)!
         }
+    }
+    var decodeSDataString: String {
+        return String(data: self, encoding: String.Encoding.utf8)!
     }
 }
 

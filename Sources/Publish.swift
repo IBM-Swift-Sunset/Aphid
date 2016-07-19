@@ -24,11 +24,11 @@ struct PublishPacket {
     let willRetain: Bool
     var topicName: String
     var identifier: UInt16?
-    var payload: [String]
+    var payload: String
 
     init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
 
-        topicName: String, packetId: UInt16, payload: [String] = []) {
+        topicName: String, packetId: UInt16, payload: String = "") {
 
         var header = header
         header.dup = dup
@@ -65,14 +65,7 @@ struct PublishPacket {
             payloadSize -= topicName.characters.count + 2
         }
 
-        var messages = [String]()
-
-        while data.count > 1 {
-            let str = data.decodeString
-            messages.append(str)
-            payloadSize -= str.characters.count
-        }
-        payload = messages
+        payload = data.decodeSDataString
 
     }
 }
@@ -94,11 +87,9 @@ extension PublishPacket: ControlPacket {
             buffer.append(identifier!.data)
         }
 
-        for item in payload {
-            buffer.append(item.data)
-        }
+        buffer.append(payload.sData)
 
-        header.remainingLength = buffer.count + payload.count
+        header.remainingLength = buffer.count
 
         var packet = header.pack()
         packet.append(buffer)

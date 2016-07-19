@@ -22,7 +22,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
 
     private var aphid: Aphid!
     
-    var testCase = "connect"
+    var testCase = ""
     var pingCount = 0
     
     let topic = "/basilplant/"
@@ -42,8 +42,8 @@ class AphidTests: XCTestCase, MQTTDelegate {
     override func setUp() {
         super.setUp()
 
-        aphid = Aphid(clientId: "tester")
-
+        aphid = Aphid(clientId: "tester2")
+        aphid.setWill(topic: "/lwt/",message: "OH NO I CLOSED", willQoS: .atMostOnce, willRetain: false)
         aphid.delegate = self
 
     }

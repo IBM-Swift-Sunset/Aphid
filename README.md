@@ -6,7 +6,7 @@
 
   - [x] MQTT 3.1
   - [x] MQTT 3.1.1
-  - [ ] LWT
+  - [x] LWT
   - [ ] SSL/TLS
   - [ ] Message Persistence
   - [ ] Automatic Reconnect

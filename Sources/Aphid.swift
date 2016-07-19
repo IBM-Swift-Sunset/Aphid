@@ -25,7 +25,12 @@ public enum connectionStatus: Int {
     case disconnected = -1
     case connecting = 0
 }
-
+public struct LastWill {
+    let topic: String
+    let message: String?
+    let qos: qosType
+    let retain: Bool
+}
 // Aphid
 public class Aphid {
 
@@ -37,7 +42,8 @@ public class Aphid {
     public var secureMQTT: Bool = false
     public var cleanSess: Bool
     public var keepAliveTime = 15
-
+    public var will: LastWill? = nil
+    
     public var status = connectionStatus.disconnected
     public var config: Config
 
@@ -151,7 +157,7 @@ public class Aphid {
         let unusedID: UInt16 = UInt16(random: true)
 
         guard let sock = socket,
-              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: [message]) else {
+              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: message) else {
 
                 return 0
         }
@@ -177,7 +183,7 @@ public class Aphid {
         let unusedID: UInt16 = UInt16(random: true)
 
         guard let sock = socket,
-              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: [message]) else {
+              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: message) else {
 
                 return 0
         }
@@ -269,7 +275,16 @@ public class Aphid {
 }
 
 extension Aphid {
-
+    /*
+     Paramters:
+         topic: The topic that the will message should be published on.
+         message: The message to send as a will. If not given, or set to nil a zero length message will be used as the will. 
+         qos: The quality of service level to use for the will.
+         retain: If set to true, the will message will be set as the "last known good"/retained message for the topic.
+     */
+    public func setWill(topic: String, message: String? = nil, willQoS: qosType = .atMostOnce, willRetain: Bool = false) {
+        will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
+    }
     public func read() {
 
         guard let sock = socket else {
@@ -307,7 +322,7 @@ extension Aphid {
 
         while buffer.count >= 2 {
 
-            guard let header = FixedHeader(buffer.subdata(in: Range(uncheckedBounds: (0, bound)))) else {
+            guard let header = FixedHeader(buffer.subdata(in: Range(0..<bound))) else {
                 bound += 1
                 return packets
             }
@@ -315,9 +330,9 @@ extension Aphid {
                 return nil
             }
 
-            let body = buffer.subdata(in: Range(uncheckedBounds: (bound, bound + header.remainingLength)))
+            let body = buffer.subdata(in: Range(bound..<bound + header.remainingLength))
 
-            buffer = buffer.subdata(in: Range(uncheckedBounds: (bound + header.remainingLength, buffer.count)))
+            buffer = buffer.subdata(in: Range(bound + header.remainingLength..<buffer.count))
 
             let packet = newControlPacket(header: header, data: body)!
 
@@ -329,7 +344,7 @@ extension Aphid {
                 let p = packet as! PublishPacket
 
                 do {
-                    try delegate?.didReceiveMessage(topic: p.topicName, message: p.payload[0])
+                    try delegate?.didReceiveMessage(topic: p.topicName, message: p.payload)
 
                 } catch {
 

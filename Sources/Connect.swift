@@ -23,50 +23,43 @@ struct ConnectPacket {
     var protocolName: String
     var protocolVersion: UInt8
     var cleanSession: Bool
+    
     var willFlag: Bool
     var willQoS: qosType
     var willRetain: Bool
     var usernameFlag: Bool
     var passwordFlag: Bool
-    var reservedBit: Bool
+    var reservedBit = false
     var keepAlive: UInt16
     var clientId: String
-    var willTopic: String?
-    var willMessage: String?
     var username: String?
     var password: String?
+    var will: LastWill?
 
     init(header: FixedHeader,
          protocolName: String = "MQTT",
          protocolVersion: UInt8 = 4,
          cleanSession: Bool = true,
-         willFlag: Bool = false,
-         willQoS: qosType = .atMostOnce,
-         willRetain: Bool = false,
-         usernameFlag: Bool = false,
-         passwordFlag: Bool = false,
-         reservedBit: Bool = false,
          keepAlive: UInt16 = 15,
          clientId: String,
-         willTopic: String? = nil,
-         willMessage: String? = nil,
          username: String? = nil,
-         password: String? = nil) {
+         password: String? = nil,
+         will: LastWill?) {
 
         self.header = header
         self.protocolName = protocolName
         self.protocolVersion = protocolVersion
         self.cleanSession = cleanSession
-        self.willFlag = willFlag
-        self.willQoS = willQoS
-        self.willRetain = willRetain
-        self.usernameFlag = usernameFlag
-        self.passwordFlag = passwordFlag
-        self.reservedBit = reservedBit
         self.keepAlive = keepAlive
         self.clientId = clientId
-        self.willTopic = willTopic
-        self.willMessage = willMessage
+        
+        self.willFlag   = will != nil ? true : false
+        self.willQoS    = will?.qos ?? .atMostOnce
+        self.willRetain = will?.retain ?? false
+        self.usernameFlag = username != nil ? true : false
+        self.passwordFlag = password != nil ? true : false
+
+        self.will = will
         self.username = username
         self.password = password
     }
@@ -92,8 +85,9 @@ struct ConnectPacket {
         self.clientId = data.decodeString
 
         if willFlag {
-            self.willTopic = data.decodeString
-            self.willMessage = data.decodeString
+            let willTopic = data.decodeString
+            let willMessage = data.decodeString
+            self.will = LastWill(topic: willTopic, message: willMessage, qos: willQoS, retain: willRetain)
         }
         if usernameFlag {
             self.username = data.decodeString
@@ -124,9 +118,10 @@ extension ConnectPacket : ControlPacket {
 
         //Begin Payload
         buffer.append(clientId.data)
+
         if willFlag {
-            buffer.append(willTopic!.data)
-            buffer.append(willMessage!.data)
+            buffer.append(will!.topic.data)
+            buffer.append(will!.message?.data ?? "".data)
         }
         if usernameFlag {
             buffer.append(username!.data)
