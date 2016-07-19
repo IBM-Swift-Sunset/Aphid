@@ -21,10 +21,24 @@ import XCTest
 class AphidTests: XCTestCase, MQTTDelegate {
 
     private var aphid: Aphid!
-    var updated: Bool? = nil
-
-    var expectation1: XCTestExpectation!
-
+    
+    var testCase = "connect"
+    var pingCount = 0
+    
+    let topic = "/basilplant/"
+    let message = "Water Me Please!!"
+   
+    var expectation: XCTestExpectation!
+    
+    static var allTests: [(String, (AphidTests) -> () throws -> Void)] {
+        return [
+            ("testConnect", testConnect),
+            ("testKeepAlive", testKeepAlive),
+            ("testDisconnect", testDisconnect),
+            ("testSubscribePublish", testSubscribePublish),
+        ]
+    }
+    
     override func setUp() {
         super.setUp()
 
@@ -35,28 +49,17 @@ class AphidTests: XCTestCase, MQTTDelegate {
     }
 
     func testConnect() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-
-        expectation1 = expectation(withDescription: "Received a message")
+        
+        testCase = "connect"
+        expectation = expectation(withDescription: "Received Connack")
 
         do {
             let _ = try aphid.connect()
-            //let _ = aphid.ping()
-            //let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
-            //let _ = aphid.ping()
-            let _ = aphid.subscribe(topic: ["/basilplant/"], qoss: [.atMostOnce])
-            let _ = aphid.publish(topic: "/basilplant/", message: "Water Me Please!!")
-            //let _ = aphid.unsubscribe(topic: ["/basilplant/"])
-            while true {
-
-            }
 
         } catch {
 
         }
 
-        sleep(30)
         // Wait for completion
         waitForExpectations(withTimeout: 30) {
             error in
@@ -67,35 +70,90 @@ class AphidTests: XCTestCase, MQTTDelegate {
 
         do {
             try aphid.disconnect(uint: 1)
-
+            sleep(5)
         } catch {
             print(error)
 
         }
     }
 
+    func testKeepAlive() {
+        
+        testCase = "ping"
+        expectation = expectation(withDescription: "Keep Alive Ping")
+        
+        do {
+            let _ = try aphid.connect()
+            
+        } catch {
+            
+        }
+        
+        // Wait for completion
+        waitForExpectations(withTimeout: 60) {
+            error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func testSubscribePublish() {
 
-    func connectionLost() throws {
+        testCase = "SubscribePublish"
+        expectation = expectation(withDescription: "Received a message")
+        
+        do {
+            let _ = try aphid.connect()
+            let _ = aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
+            let _ = aphid.publish(topic: topic, message: message)
+            
+        } catch {
+            
+        }
+        
+        // Wait for completion
+        waitForExpectations(withTimeout: 30) {
+            error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func testDisconnect() {
+
+        testCase = "disconnect"
+
+        do {
+            let _ = try aphid.connect()
+            let _ = try aphid.disconnect(uint: 1)
+        } catch {
+            XCTAssert(1 == 2)
+        }
+    }
+    
+    // Protocol Functions
+    func didLoseConnection() throws {
         print("connection lost")
     }
 
-
-    func deliveryComplete(token: String) {
-        if token == "2: dup: false qos: 0 retain false remainingLength 2" {
-            expectation1.fulfill()
+    func didCompleteDelivery(token: String) {
+        if testCase == "connect" {
+            expectation.fulfill()
+        } else if testCase == "ping" {
+            pingCount += 1
+            if pingCount >= 3 {
+                expectation.fulfill()
+            }
+            
         }
-        print(token)
-
     }
 
-    func messageArrived(topic: String, message: String) throws {
-        //expectation1.fulfill()
+    func didReceiveMessage(topic: String, message: String) throws {
+        if testCase == "SubscribePublish" && topic == self.topic && message == self.message {
+            expectation.fulfill()
+        }
         print(topic, message)
-    }
-
-    static var allTests: [(String, (AphidTests) -> () throws -> Void)] {
-        return [
-            ("testConnect", testConnect),
-        ]
     }
 }

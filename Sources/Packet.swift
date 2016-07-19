@@ -201,9 +201,7 @@ extension Aphid {
 extension Bool {
 
     var toByte: Byte {
-        get {
-            return self ? 0x01 : 0x00
-        }
+        return self ? 0x01 : 0x00
     }
 }
 
@@ -221,68 +219,37 @@ extension String {
     }
 
     var data: Data {
-        get {
-            var array = Data()
+        var array = Data()
 
-            let utf = self.data(using: String.Encoding.utf8)!
-            array.append(UInt16(utf.count).data)
-            array.append(utf)
+        let utf = self.data(using: String.Encoding.utf8)!
+        array.append(UInt16(utf.count).data)
+        array.append(utf)
 
-            return array
-        }
+        return array
     }
 }
 
 extension Int {
 
-    init(_ reader: SocketReader) {     // This doesn't work at the moment
-        var rLength: UInt32 = 0
-        var multiplier: UInt32 = 0
-        var b: Byte = 0x00
-        while true {
-            b = UInt8(reader)
-            let digit = b[0]
-            rLength |= UInt32(digit & 127) << multiplier
-            if (digit & 128) == 0 {
-                break
-            }
-            multiplier += 7
-        }
-        self = Int(rLength)
-    }
-
     var toBytes: [Byte] {
-        get {
-            var encLength = [Byte]()
-            var length = self
+        var encLength = [Byte]()
+        var length = self
 
-            repeat {
-                var digit = Byte(length % 128)
-                length /= 128
-                if length > 0 {
-                    digit |= 0x80
-                }
-                encLength.append(digit)
+        repeat {
+            var digit = Byte(length % 128)
+            length /= 128
+            if length > 0 {
+                digit |= 0x80
+            }
+            encLength.append(digit)
 
-            } while length != 0
+        } while length != 0
 
-            return encLength
-        }
+        return encLength
     }
-
 }
 
 extension UInt8 {
-
-    init(_ reader: SocketReader) {
-        let num = NSMutableData(capacity: 1)
-        do {
-            let _ = try reader.read(into: num!)
-        } catch {
-
-        }
-        self = decode(num!)
-    }
 
     var data: Data {
         return Data(bytes: [self])
@@ -303,15 +270,6 @@ extension UInt8 {
 
 extension UInt16 {
 
-    init(_ reader: SocketReader) {
-        let uint = NSMutableData(capacity: 2)
-        do {
-            let _ = try reader.read(into: uint!)
-        } catch {
-
-        }
-        self = decode(uint!)
-    }
     init(random: Bool) {
         var r: UInt16 = 0
         arc4random_buf(&r, sizeof(UInt16.self))
@@ -323,27 +281,24 @@ extension UInt16 {
     }
 
     var data: Data {
-        get {
-            var data = Data()
-            var bytes: [UInt8] = [0x00, 0x00]
-            bytes[0] = UInt8(self >> 8)
-            bytes[1] = UInt8(self & 0x00ff)
-            data.append(Data(bytes: bytes, count: 2))
-            return data
-        }
+        var data = Data()
+        var bytes: [UInt8] = [0x00, 0x00]
+        bytes[0] = UInt8(self >> 8)
+        bytes[1] = UInt8(self & 0x00ff)
+        data.append(Data(bytes: bytes, count: 2))
+        return data
     }
 
     var bytes: [Byte] {
-        get {
-            var bytes: [UInt8] = [0x00, 0x00]
-            bytes[0] = UInt8(self >> 8)
-            bytes[1] = UInt8(self & 0x00ff)
-            return bytes
-        }
+        var bytes: [UInt8] = [0x00, 0x00]
+        bytes[0] = UInt8(self >> 8)
+        bytes[1] = UInt8(self & 0x00ff)
+        return bytes
     }
 }
 
 extension Data {
+
     var decodeUInt8: UInt8 {
         mutating get {
             let uint = UInt8(self[0])
@@ -375,6 +330,7 @@ func getBytes(_ value: Data) {
         buffer, byteIndex, stop in
 
         print(buffer.first!)
+
         if byteIndex == value.count {
             stop = true
         }

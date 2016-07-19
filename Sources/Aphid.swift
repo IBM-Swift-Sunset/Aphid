@@ -134,8 +134,11 @@ public class Aphid {
                 try disconnectPacket.write(writer: sock)
 
                 self.status = .disconnected
-                self.readQueue.suspend()
+                
                 sock.close()
+                
+                buffer = Data()
+                keepAliveTimer = nil
 
             } catch {
                 NSLog("failure")
@@ -259,7 +262,6 @@ public class Aphid {
                 try pingreqPacket.write(writer: sock)
 
             } catch {
-                return
 
             }
         }
@@ -327,13 +329,13 @@ extension Aphid {
                 let p = packet as! PublishPacket
 
                 do {
-                    try delegate?.messageArrived(topic: p.topicName, message: p.payload[0])
+                    try delegate?.didReceiveMessage(topic: p.topicName, message: p.payload[0])
 
                 } catch {
 
                 }
             } else {
-                delegate?.deliveryComplete(token: packet.description)
+                delegate?.didCompleteDelivery(token: packet.description)
             }
         }
 

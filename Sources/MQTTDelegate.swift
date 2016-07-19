@@ -24,7 +24,7 @@ public protocol MQTTDelegate {
 
      throws: cause of the reason behind the loss of connection.
      */
-    func connectionLost() throws
+    func didLoseConnection() throws
 
     /**
      Called when delivery for a message has been completed, and all
@@ -36,7 +36,7 @@ public protocol MQTTDelegate {
 
      - parameter token: token the delivery token associated with the message
      */
-    func deliveryComplete(token: String)
+    func didCompleteDelivery(token: String)
 
 
 
@@ -69,7 +69,7 @@ public protocol MQTTDelegate {
      - parameter message: the actual message
      - throws: exception if an error has occurred, and the client should be shut down.
      */
-    func messageArrived(topic: String, message: String) throws
+    func didReceiveMessage(topic: String, message: String) throws
 
 
 
