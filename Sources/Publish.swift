@@ -20,13 +20,13 @@ import Socket
 struct PublishPacket {
     var controlByte: UInt8
     
-    var qos: qosType
+    var qos: QosType
 
     var topic: String
     var identifier = UInt16(random: true)
     var message: String
 
-    init(dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false, topic: String, message: String = "") {
+    init(topic: String, message: String = "", dup: Bool = false, qos: QosType = .atLeastOnce, willRetain: Bool = false) {
 
         controlByte = ControlCode.publish.rawValue | dup.toByte << 3 | qos.rawValue << 1 | willRetain.toByte
 
@@ -40,7 +40,7 @@ struct PublishPacket {
         var data = data
 
         self.controlByte = header
-        self.qos = qosType(rawValue: controlByte & UInt8(0x08))!
+        self.qos = QosType(rawValue: controlByte & UInt8(0x08))!
         
         topic = data.decodeString
 
@@ -73,10 +73,13 @@ extension PublishPacket: ControlPacket {
         }
         
         buffer.append(message.sData)
+
         packet.append(controlByte.data)
+
         for byte in buffer.count.toBytes {
             packet.append(byte.data)
         }
+
         packet.append(buffer)
 
         do {

@@ -23,12 +23,14 @@ class AphidTests: XCTestCase, MQTTDelegate {
     private var aphid: Aphid!
     
     var testCase = ""
-    var pingCount = 0
+    var receivedCount = 0
     
-    let topic = "/basilplant/"
-    let message = "Water Me Pretty Please!!"
+    let topic = "plants/basilplant"
+    let message = "Basilplant #1 needs to be watered"
    
-    var expectation: XCTestExpectation!
+    weak var expectation: XCTestExpectation!
+    
+    var tokens = [String]()
     
     static var allTests: [(String, (AphidTests) -> () throws -> Void)] {
         return [
@@ -36,19 +38,23 @@ class AphidTests: XCTestCase, MQTTDelegate {
             ("testKeepAlive", testKeepAlive),
             ("testDisconnect", testDisconnect),
             ("testSubscribePublish", testSubscribePublish),
+            ("testQosExactlyOnce",testQosExactlyOnce),
         ]
     }
     
     override func setUp() {
         super.setUp()
 
-        aphid = Aphid(clientId: "tester2")
-        aphid.setWill(topic: "/lwt/",message: "OH NO I CLOSED", willQoS: .atMostOnce, willRetain: false)
+        let clientId = "Aaron"
+        aphid = Aphid(clientId: clientId)
+
+        aphid.setWill(topic: "lastWillAndTestament/",message: "Client \(clientId) Closed Unexpectedly", willQoS: .atMostOnce, willRetain: false)
+
         aphid.delegate = self
 
     }
 
-    func testConnect() {
+    func testConnect() throws {
         
         testCase = "connect"
         expectation = expectation(withDescription: "Received Connack")
@@ -57,7 +63,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
             try aphid.connect()
 
         } catch {
-
+            throw error
         }
 
         // Wait for completion
@@ -72,21 +78,22 @@ class AphidTests: XCTestCase, MQTTDelegate {
             try aphid.disconnect(uint: 1)
             sleep(5)
         } catch {
-            print(error)
+            throw error
 
         }
     }
 
-    func testKeepAlive() {
+    func testKeepAlive() throws {
         
         testCase = "ping"
+        receivedCount = 0
         expectation = expectation(withDescription: "Keep Alive Ping")
         
         do {
             let _ = try aphid.connect()
             
         } catch {
-            
+            throw error
         }
         
         // Wait for completion
@@ -98,7 +105,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
     }
     
-    func testSubscribePublish() {
+    func testSubscribePublish() throws {
 
         testCase = "SubscribePublish"
         expectation = expectation(withDescription: "Received a message")
@@ -106,10 +113,10 @@ class AphidTests: XCTestCase, MQTTDelegate {
         do {
             try aphid.connect()
             try aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
-            try aphid.publish(topic: topic, message: message)
+            try aphid.publish(topic: topic, withMessage: message, qos: QosType.exactlyOnce)
             
         } catch {
-            
+            throw error
         }
         
         // Wait for completion
@@ -120,8 +127,32 @@ class AphidTests: XCTestCase, MQTTDelegate {
             }
         }
     }
-
-    func testDisconnect() {
+    
+    func testQosExactlyOnce() throws {
+        
+        testCase = "qos 2"
+        receivedCount = 0
+        expectation = expectation(withDescription: "Received message exactly Once")
+        
+        do {
+            try aphid.connect()
+            try aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
+            try aphid.publish(topic: topic, withMessage: message, qos: .exactlyOnce)
+            
+        } catch {
+            throw error
+        }
+        
+        // Wait for completion
+        waitForExpectations(withTimeout: 30) {
+            error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func testDisconnect() throws {
 
         testCase = "disconnect"
 
@@ -129,26 +160,32 @@ class AphidTests: XCTestCase, MQTTDelegate {
             try aphid.connect()
             try aphid.disconnect(uint: 1)
         } catch {
-
+            throw error
         }
     }
     
     // Protocol Functions
     func didLoseConnection() {
-        print("connection lost")
+        print("Connection lost")
     }
     func didConnect() {
-        
+        if testCase == "connect"  && receivedCount == 0{
+            receivedCount += 1
+            expectation.fulfill()
+        }
     }
     func didCompleteDelivery(token: String) {
-        if testCase == "connect" && token == "connack"{
-            expectation.fulfill()
-        } else if testCase == "ping" {
-            pingCount += 1
-            if pingCount >= 3 {
+        if testCase == "ping" && token == "pingresp" {
+            receivedCount += 1
+            if receivedCount >= 3 {
                 expectation.fulfill()
             }
-            
+        } else if testCase == "qos 2" && (token == "pubrec" ||
+                  token == "pubcomp") && !tokens.contains(token) {
+            tokens.append(token)
+            if tokens.count == 2 {
+                expectation.fulfill()
+            }
         }
     }
 

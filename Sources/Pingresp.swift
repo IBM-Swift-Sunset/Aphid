@@ -19,9 +19,6 @@ import Socket
 
 
 struct PingrespPacket: ControlPacket {
-    
-    init(){}
-    init(data: Data) {}
 
     var description: String {
         return String(ControlCode.pingresp)

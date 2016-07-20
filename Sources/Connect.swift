@@ -31,7 +31,7 @@ struct ConnectPacket {
         let reservedBit  = (1 & options).bool
         let cleanSession = (1 & (options >> 1)).bool
         let willFlag     = (1 & (options >> 2)).bool
-        let willQoS      = qosType(rawValue: 3 & (options >> 3))!
+        let willQoS      = QosType(rawValue: 3 & (options >> 3))!
         let willRetain   = (1 & (options >> 5)).bool
         let usernameFlag = (1 & (options >> 6)).bool
         let passwordFlag = (1 & (options >> 7)).bool
@@ -108,23 +108,23 @@ extension ConnectPacket : ControlPacket {
     }
 
     func validate() -> ErrorCodes {
-        /*if config.username && config.password != nil {
+        if config.username != nil && config.password != nil {
             return .errRefusedIDRejected
         }
-        if reservedBit {
+        if true { // reservedBit
             return .errRefusedBadProtocolVersion
         }
-        if (config. == "MQIsdp" && protocolVersion != 3) || (protocolName == "MQTT" && protocolVersion != 4) {
+        if (config.protocolName == "MQIsdp" && config.protocolVersion != 3) || (config.protocolName == "MQTT" && config.protocolVersion != 4) {
             return .errRefusedBadProtocolVersion
         }
-        if protocolName != "MQIsdp" && protocolName != "MQTT" {
+        if config.protocolName != "MQIsdp" && config.protocolName != "MQTT" {
             return .errRefusedBadProtocolVersion
         }
-        if clientId.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
-          username?.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
-          password?.lengthOfBytes(using: String.Encoding.utf8) > 65535 {
+        if config.clientId.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
+          config.username?.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
+          config.password?.lengthOfBytes(using: String.Encoding.utf8) > 65535 {
            return .errRefusedBadProtocolVersion
-        }*/
+        }
         return .accepted
     }
 }

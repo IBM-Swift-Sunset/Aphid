@@ -18,9 +18,11 @@ import Foundation
 import Socket
 
 struct PubackPacket {
-    var packetId: UInt16 = UInt16(random: true)
+    var packetId: UInt16
     
-    init(){}
+    init(packetId: UInt16 = UInt16(random: true)){
+        self.packetId = packetId
+    }
     init?(data: Data) {
         packetId = UInt16(msb: data[0], lsb: data[1])
     }

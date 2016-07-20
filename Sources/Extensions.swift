@@ -44,6 +44,21 @@ extension String {
         
         return array
     }
+    
+    func matches(pattern: String!) -> Bool {
+        
+        do {
+            let regex = try RegularExpression(pattern: pattern, options: [])
+            let nsString = self as NSString
+            let results = regex.matches(in: self, range: NSMakeRange(0, nsString.length))
+            if nsString.substring(with: results[0].range) == self {
+                return true
+            }
+        } catch {
+            NSLog("Malformed Expression")
+        }
+        return false
+    }
 }
 
 extension Int {
@@ -214,17 +229,4 @@ func decodeLength(_ data: Data) -> Int? {
         }
     } while (byte & 0x80) != 0
     return Int(rLength)
-}
-
-func matches(for regex: String!, in text: String!) -> [String] {
-    
-    do {
-        let regex = try RegularExpression(pattern: regex, options: [])
-        let nsString = text as NSString
-        let results = regex.matches(in: text, range: NSMakeRange(0, nsString.length))
-        return results.map { nsString.substring(with: $0.range)}
-    } catch let error as NSError {
-        print("invalid regex: \(error.localizedDescription)")
-        return []
-    }
 }

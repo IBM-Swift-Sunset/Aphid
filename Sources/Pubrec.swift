@@ -18,11 +18,13 @@ import Foundation
 import Socket
 
 struct PubrecPacket : ControlPacket {
-    var packetId: UInt16 = UInt16(random: true)
+    let packetId: UInt16
     
-    init(){}
+    init(packetId: UInt16){
+        self.packetId = packetId
+    }
     init?(data: Data) {
-     packetId = UInt16(msb: data[0], lsb: data[1])
+        packetId = UInt16(msb: data[0], lsb: data[1])
      }
     
     var description: String {

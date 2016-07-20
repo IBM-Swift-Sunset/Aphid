@@ -31,7 +31,7 @@ public enum ControlCode: Byte {
     case publish    = 0x30
     case puback     = 0x40
     case pubrec     = 0x50
-    case pubrel     = 0x62
+    case pubrel     = 0x60
     case pubcomp    = 0x70
     case subscribe  = 0x82
     case suback     = 0x90
@@ -54,9 +54,11 @@ public enum ErrorCodes: Byte, ErrorProtocol {
     
     case errConnectionNotMade           = 0x07
     case errAlreadyDisconnected         = 0x08
+    case errSocketNotOpen               = 0x09
+    case errInvalidTopicName            = 0x0a
 }
 
-public enum connectionStatus: Int {
+public enum ConnectionStatus: Int {
     case connected = 1
     case disconnected = -1
     case connecting = 0
@@ -65,11 +67,11 @@ public enum connectionStatus: Int {
 public struct LastWill {
     let topic: String
     let message: String?
-    let qos: qosType
+    let qos: QosType
     let retain: Bool
 }
 
-public enum qosType: Byte {
+public enum QosType: Byte {
     case atMostOnce = 0x00  // At Most One Delivery
     case atLeastOnce = 0x01 // At Least Deliver Once
     case exactlyOnce = 0x02 // Deliver Exactly Once

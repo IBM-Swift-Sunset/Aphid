@@ -21,9 +21,9 @@ import Socket
 struct SubscribePacket {
     var packetId: UInt16 = UInt16(random: true)
     var topics: [String]
-    var qoss: [qosType]
+    var qoss: [QosType]
 
-    init(topics: [String], qoss: [qosType]) {
+    init(topics: [String], qoss: [QosType]) {
         self.topics = topics
         self.qoss = qoss
 
@@ -34,11 +34,13 @@ struct SubscribePacket {
         self.packetId = data.decodeUInt16
 
         var topics = [String]()
-        var qoss = [qosType]()
+        var qoss = [QosType]()
+
         while data.count > 0 {
             topics.append(data.decodeString)
-            qoss.append(qosType(rawValue: data.decodeUInt8)!)
+            qoss.append(QosType(rawValue: data.decodeUInt8)!)
         }
+
         self.topics = topics
         self.qoss = qoss
     }
@@ -59,6 +61,11 @@ extension SubscribePacket : ControlPacket {
         buffer.append(packetId.data)
 
         for (topic, qos) in zip(topics, qoss) {
+
+            guard topic.matches(pattern: "[a-z,0-9, ,+]+((/[a-z,0-9, ]+)|(/[+]))*[a-z,0-9, ]*(/#)?") else {
+                throw ErrorCodes.errUnknown
+            }
+
             buffer.append(topic.data)
             buffer.append(qos.rawValue.data)
         }

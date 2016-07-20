@@ -20,10 +20,8 @@ import Dispatch
 
 public typealias Byte = UInt8
 
-// Aphid
 public class Aphid {
 
-    // User Configuration
     public var delegate: MQTTDelegate?
 
     private var socket: Socket?
@@ -34,7 +32,6 @@ public class Aphid {
 
     public let readQueue: DispatchQueue
     public let writeQueue: DispatchQueue
-
 
     private var bound = 2
 
@@ -56,7 +53,7 @@ public class Aphid {
         socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
 
         guard let sock = socket else {
-            throw ErrorCodes.errUnknown
+            throw ErrorCodes.errSocketNotOpen
         }
         
         do {
@@ -68,16 +65,16 @@ public class Aphid {
 
             try connectPacket.write(writer: sock)
 
-            self.read()
+            read()
 
         } catch {
-            print("error")
+            throw error
 
         }
 
         startTimer()
 
-        config.status = connectionStatus.connected
+        config.status = .connected
 
         delegate?.didConnect()
 
@@ -88,23 +85,24 @@ public class Aphid {
 
     public func disconnect(uint: UInt) throws {
         
-        guard config.status != connectionStatus.disconnected else {
+        guard config.status != .disconnected else {
             throw ErrorCodes.errAlreadyDisconnected
         }
 
         guard let sock = socket else {
-            throw ErrorCodes.errUnknown
+            throw ErrorCodes.errSocketNotOpen
         }
         
-        writeQueue.sync {
+        try writeQueue.sync {
             do {
                 let disconnectPacket = DisconnectPacket()
 
                 try disconnectPacket.write(writer: sock)
 
                 config.status = .disconnected
-                
-                // Look into waiting until it clears out the write queue then disconnect /
+
+                sleep(config.quiesce)   // Sleep to allow buffering packets to be sent
+
                 sock.close()
 
                 buffer = Data()
@@ -112,73 +110,59 @@ public class Aphid {
                 keepAliveTimer = nil
 
             } catch {
-                 print("error")
+                 throw error
 
             }
         }
     }
 
-    public func publish(topic: String, withMessage message: String, qos: qosType, retained: Bool, dup: Bool) throws {
-        // Cant use Wildcards in topic names
-
-        guard let sock = socket else {
-            throw ErrorCodes.errUnknown
-        }
-
-        writeQueue.sync {
-            do {
-                var publishPacket = PublishPacket(topic: topic, message: message)
-
-                try publishPacket.write(writer: sock)
-
-                self.resetTimer()
-
-            } catch {
-                 print("error")
-
-            }
-        }
-    }
-
-    public func publish(topic: String, message: String) throws {
-        // Cant use Wildcards in topic names #
+    public func publish(topic: String, withMessage message: String, qos: QosType = .atLeastOnce, retain: Bool = false) throws {
         
         guard let sock = socket else {
-            throw ErrorCodes.errUnknown
+            throw ErrorCodes.errSocketNotOpen
         }
-
-        writeQueue.sync {
+        
+        guard topic.matches(pattern: config.publishPattern) else {
+            throw ErrorCodes.errInvalidTopicName
+        }
+        
+        try writeQueue.sync {
             do {
-                
-                var publishPacket = PublishPacket(topic: topic, message: message)
+                // Dup: we have to decide if this the first time this is sent or just a duplicate; not the user's job
+                var publishPacket = PublishPacket(topic: topic, message: message, dup: false, qos: qos, willRetain: retain)
                 
                 try publishPacket.write(writer: sock)
+                
+                if qos ==  .atMostOnce{
+                    delegate?.didCompleteDelivery(token: String(publishPacket.identifier))
+                }
 
-                self.resetTimer()
-
+                resetTimer()
+                
             } catch {
-                 print("error")
+                throw error
+                
             }
         }
     }
 
-    public func subscribe(topic: [String], qoss: [qosType]) throws {
-        // Can use Wildcards in topic filters
+    public func subscribe(topic: [String], qoss: [QosType]) throws {
 
         guard let sock = socket else {
-                throw ErrorCodes.errUnknown
+                throw ErrorCodes.errSocketNotOpen
         }
 
-        writeQueue.sync {
+        try writeQueue.sync {
             do {
                 var subscribePacket = SubscribePacket(topics: topic, qoss: qoss)
                 
                 try subscribePacket.write(writer: sock)
 
-                self.resetTimer()
+                resetTimer()
 
             } catch {
-                 print("error")
+                throw error
+
             }
         }
     }
@@ -186,19 +170,20 @@ public class Aphid {
     public func unsubscribe(topics: [String]) throws {
 
         guard let sock = socket else {
-            throw ErrorCodes.errUnknown
+            throw ErrorCodes.errSocketNotOpen
         }
 
-        writeQueue.sync {
+        try writeQueue.sync {
             do {
                 var unsubscribePacket = UnsubscribePacket(topics: topics)
                 
                 try unsubscribePacket.write(writer: sock)
 
-                self.resetTimer()
+                resetTimer()
 
             } catch {
-                 print("error")
+                throw error
+
             }
         }
     }
@@ -206,31 +191,45 @@ public class Aphid {
     public func ping() throws {
 
         guard let sock = socket else {
-            throw ErrorCodes.errUnknown
+            throw ErrorCodes.errSocketNotOpen
         }
 
-        writeQueue.sync {
+        try writeQueue.sync {
             do {
                 var pingreqPacket = PingreqPacket()
                 
                 try pingreqPacket.write(writer: sock)
 
             } catch {
-                 print("error")
+                throw error
+
+            }
+        }
+    }
+    
+    private func pubrel(packetId: UInt16) throws {
+
+        guard let sock = socket else {
+            throw ErrorCodes.errSocketNotOpen
+        }
+        
+        try writeQueue.sync {
+            do {
+                var pubrelPacket = PubrelPacket(packetId: packetId)
+                
+                try pubrelPacket.write(writer: sock)
+                
+            } catch {
+                throw error
+
             }
         }
     }
 }
 
 extension Aphid {
-    /*
-     Paramters:
-         topic: The topic that the will message should be published on.
-         message: The message to send as a will. If not given, or set to nil a zero length message will be used as the will. 
-         qos: The quality of service level to use for the will.
-         retain: If set to true, the will message will be set as the "last known good"/retained message for the topic.
-     */
-    public func setWill(topic: String, message: String? = nil, willQoS: qosType = .atMostOnce, willRetain: Bool = false) {
+
+    public func setWill(topic: String, message: String? = nil, willQoS: QosType = .atMostOnce, willRetain: Bool = false) {
         config.will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
     }
     public func read() {
@@ -263,6 +262,7 @@ extension Aphid {
             }
         }
     }
+
     func parseHeader() -> (Byte, Int)? {
         let data = buffer.subdata(in: Range(0..<bound))
         
@@ -275,6 +275,7 @@ extension Aphid {
         }
         return (controlByte[0], length)
     }
+
     func unpack() -> [ControlPacket]? {
 
         var packets = [ControlPacket]()
@@ -303,10 +304,19 @@ extension Aphid {
 
             bound = 2
 
-            if let packet = packet as? PublishPacket {
-                delegate?.didReceiveMessage(topic: packet.topic, message: packet.message)
-            } else {
-                delegate?.didCompleteDelivery(token: packet.description)
+            switch packet {
+            case _ as ConnackPacket     : delegate?.didConnect()
+            case _ as PubackPacket      : delegate?.didCompleteDelivery(token: packet.description)
+            case _ as PubcompPacket     : delegate?.didCompleteDelivery(token: packet.description)
+            case let p as PublishPacket : delegate?.didReceiveMessage(topic: p.topic, message: p.message)
+            case let p as PubrecPacket  : delegate?.didCompleteDelivery(token: packet.description)
+                do {
+                    try self.pubrel(packetId: p.packetId)
+
+                } catch {
+                    NSLog("Could Not Respond to Pubrex")
+                }
+            default: delegate?.didCompleteDelivery(token: packet.description)
             }
         }
 
@@ -327,6 +337,7 @@ extension Aphid {
             self.writeQueue.async {
                 do {
                     try self.ping()
+
                 } catch {
                     
                 }
@@ -343,7 +354,7 @@ extension Aphid {
         startTimer()
     }
 }
-
+    
 extension Aphid {
     func newControlPacket(header: Byte, bodyLength: Int, data: Data) -> ControlPacket? {
         let code: ControlCode = ControlCode(rawValue: (header & 0xF0))!
@@ -371,9 +382,9 @@ extension Aphid {
         case .unsuback:
             return UnSubackPacket(data: data)
         case .pingreq:
-            return PingreqPacket(data: data)
+            return PingreqPacket()
         case .pingresp:
-            return PingrespPacket(data: data)
+            return PingrespPacket()
         case .disconnect:
             return DisconnectPacket(data: data)
         default:

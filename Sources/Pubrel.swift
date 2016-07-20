@@ -19,9 +19,11 @@ import Foundation
 import Socket
 
 struct PubrelPacket : ControlPacket {
-    var packetId: UInt16 = UInt16(random: true)
+    let packetId: UInt16
     
-    init(){}
+    init(packetId: UInt16){
+        self.packetId = packetId
+    }
     init?(data: Data) {
         packetId = UInt16(msb: data[0], lsb: data[1])
     }
@@ -35,7 +37,7 @@ struct PubrelPacket : ControlPacket {
             throw ErrorCodes.errUnknown
         }
         
-        buffer.append(ControlCode.pubrel.rawValue.data)
+        buffer.append((ControlCode.pubrel.rawValue | 0x02).data)
         buffer.append(2.data)
         buffer.append(packetId.data)
         

@@ -32,24 +32,28 @@ public struct Config {
     var username: String?
     var password: String?
     var dup: Bool
-    var qos: qosType
+    var qos: QosType
     var retain: Bool
 
     var cleanSession: Bool
     var secureMQTT: Bool = false
     var willTopic: String?
 	var willPayload: [Byte]
-	var willQos: qosType
+	var willQos: QosType
 	var willRetain: Bool
 	var keepAlive: UInt16
 	var pingTimeout: UInt16
 	var connectTimeout: UInt16
 	var maxReconnectInterval: UInt16
 	var autoReconnect: Bool
+    var quiesce: UInt32 = 10
 	var writeTimeout: UInt16?
-    var status: connectionStatus
+    var status: ConnectionStatus
     var will: LastWill? = nil
     
+    let subscribePattern = "[a-z,0-9, ,+]+((/[a-z,0-9, ]+)|(/[+]))*[a-z,0-9, ]*(/#)?"
+    let publishPattern = "[a-z,0-9, ]+(/[a-z,0-9, ]+)*"
+
     var flags: UInt8 {
         get {
             return (cleanSession.toByte << 1 | (will != nil).toByte << 2 | willQos.rawValue << 3  |
@@ -69,7 +73,7 @@ public struct Config {
         password = nil
         
         dup = true
-        qos = qosType.atMostOnce
+        qos = QosType.atMostOnce
         retain = true
         
         cleanSession = true
@@ -77,7 +81,6 @@ public struct Config {
         willPayload = [Byte]()
         willQos = .atMostOnce
         willRetain = false
-        
         
         keepAlive = 10
         pingTimeout = 10
@@ -93,9 +96,16 @@ public struct Config {
         self.host = host
         self.port = port
     }
+
     mutating func setUser(clientId: String, username: String? = nil, password: String? = nil){
         self.clientId = clientId
         self.username = username
         self.password = password
+    }
+
+    mutating func setFlags(qos: QosType, dup: Bool, retain: Bool) {
+        self.qos = qos
+        self.dup = dup
+        self.retain = retain
     }
 }
