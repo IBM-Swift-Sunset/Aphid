@@ -18,20 +18,15 @@ import Foundation
 import Socket
 
 struct ConnackPacket {
-    var header: FixedHeader
-    var flags: Byte
-    var responseCode: Byte
+    var flags: Byte = 0x00
+    var responseCode: Byte = 0x00
+    
+    init(){}
 
-    init(header: FixedHeader) {
-        self.header = header
-        self.flags = 0x00 // TEmporary
-        self.responseCode = 0x00 // TEmporary
-    }
-
-    init(header: FixedHeader, data: Data) {
-        self.header = header
-        flags = data[0]
-        responseCode = data[1]
+    init(data: Data) {
+        var data = data
+        self.flags = data.decodeUInt8
+        self.responseCode = data.decodeUInt8
     }
 
 }
@@ -39,7 +34,7 @@ struct ConnackPacket {
 extension ConnackPacket: ControlPacket {
 
     var description: String {
-        return header.description
+        return String(ControlCode.connack)
     }
 
     mutating func write(writer: SocketWriter) throws {
@@ -47,19 +42,17 @@ extension ConnackPacket: ControlPacket {
         guard var buffer = Data(capacity: 128) else {
             throw NSError()
         }
-
+        
+        buffer.append(ControlCode.connack.rawValue.data)
+        buffer.append(UInt8(2).data)
         buffer.append(flags.data)
-        buffer.append(responseCode.data)
-        header.remainingLength = 2
-
-        var packet = header.pack()
-        packet.append(buffer)
+        buffer.append(UInt8(responseCode).data)
 
         do {
-            try writer.write(from: packet)
+            try writer.write(from: buffer)
 
         } catch {
-            throw NSError()
+            throw error
 
         }
     }

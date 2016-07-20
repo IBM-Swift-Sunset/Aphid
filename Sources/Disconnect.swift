@@ -17,21 +17,21 @@
 import Foundation
 import Socket
 
-class DisconnectPacket {
-    let header: FixedHeader
+struct DisconnectPacket: ControlPacket {
+    
+    init(){}
+    init(data: Data) {}
 
-    init(header: FixedHeader) {
-        self.header = header
-    }
-}
-
-extension DisconnectPacket: ControlPacket {
     var description: String {
-        return header.description
+        return String(ControlCode.disconnect)
     }
     func write(writer: SocketWriter) throws {
-        let packet = header.pack()
-        try writer.write(from: packet)
+        guard var buffer = Data(capacity: 2) else {
+            throw ErrorCodes.errUnknown
+        }
+        buffer.append(ControlCode.disconnect.rawValue.data)
+        buffer.append(0.data)
+        try writer.write(from: buffer)
     }
 
     func unpack(reader: SocketReader) {

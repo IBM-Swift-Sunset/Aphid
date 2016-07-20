@@ -18,13 +18,14 @@ import Foundation
 
 
 public protocol MQTTDelegate {
-
+    
+    func didConnect()
     /**
      This method is called when the connection to the server is lost.
 
      throws: cause of the reason behind the loss of connection.
      */
-    func didLoseConnection() throws
+    func didLoseConnection()
 
     /**
      Called when delivery for a message has been completed, and all
@@ -69,7 +70,7 @@ public protocol MQTTDelegate {
      - parameter message: the actual message
      - throws: exception if an error has occurred, and the client should be shut down.
      */
-    func didReceiveMessage(topic: String, message: String) throws
+    func didReceiveMessage(topic: String, message: String)
 
 
 

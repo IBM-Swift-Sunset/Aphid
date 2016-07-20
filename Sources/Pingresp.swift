@@ -18,27 +18,36 @@ import Foundation
 import Socket
 
 
-struct PingrespPacket {
-    let header: FixedHeader
+struct PingrespPacket: ControlPacket {
+    
+    init(){}
+    init(data: Data) {}
 
-    init(header: FixedHeader) {
-        self.header = header
-    }
-}
-
-extension PingrespPacket: ControlPacket {
     var description: String {
-        return header.description
+        return String(ControlCode.pingresp)
     }
-
+    
     mutating func write(writer: SocketWriter) throws {
-        let packet = header.pack()
-        try writer.write(from: packet)
+        
+        guard var buffer = Data(capacity: 2) else {
+            throw ErrorCodes.errUnknown
+        }
+        
+        buffer.append(ControlCode.pingresp.rawValue.data)
+        buffer.append(0.data)
+        
+        do {
+            try writer.write(from: buffer)
+            
+        } catch {
+            throw error
+            
+        }
     }
-
+    
     mutating func unpack(reader: SocketReader) {
     }
-
+    
     func validate() -> ErrorCodes {
         return .accepted
     }

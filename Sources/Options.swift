@@ -16,17 +16,28 @@
 
 import Foundation
 
+var config = Config.sharedInstance
+
 public struct Config {
+    
+    static var sharedInstance = Config()
+    
+    var host = "localhost"
+    var port: Int32 = 1883
+    
+    var protocolName: String
+    var protocolVersion: UInt8
+    
     var clientId: String
     var username: String?
     var password: String?
-    var protocolName: String
-    var protocolVersion: UInt
-    var servers: [NSURL]
-	var cleanSession: Bool
-	var order: Bool
-	var willEnabled: Bool
-	var willTopic: String?
+    var dup: Bool
+    var qos: qosType
+    var retain: Bool
+
+    var cleanSession: Bool
+    var secureMQTT: Bool = false
+    var willTopic: String?
 	var willPayload: [Byte]
 	var willQos: qosType
 	var willRetain: Bool
@@ -36,34 +47,55 @@ public struct Config {
 	var maxReconnectInterval: UInt16
 	var autoReconnect: Bool
 	var writeTimeout: UInt16?
-	var messageChannelDepth: UInt
+    var status: connectionStatus
+    var will: LastWill? = nil
+    
+    var flags: UInt8 {
+        get {
+            return (cleanSession.toByte << 1 | (will != nil).toByte << 2 | willQos.rawValue << 3  |
+                willRetain.toByte << 5 | (password != nil).toByte << 6 | (username != nil).toByte << 7)
+        }
+    }
 
-    init(clientId: String, username: String? = nil, password: String? = nil, cleanSess: Bool) {
-        servers = [NSURL]()
-        self.clientId = clientId
-        self.username = username
-        self.password = password
-        cleanSession = cleanSess
-        order = true
-        willEnabled = false
+    private init() {
+        protocolName = "MQTT"
+        protocolVersion = 4
+        
+        host = "localhost"
+        port = 1883
+        
+        clientId = ""
+        username = nil
+        password = nil
+        
+        dup = true
+        qos = qosType.atMostOnce
+        retain = true
+        
+        cleanSession = true
         willTopic = nil
         willPayload = [Byte]()
         willQos = .atMostOnce
         willRetain = false
-        protocolName = "MQTT"
-        protocolVersion = 4
+        
+        
         keepAlive = 10
         pingTimeout = 10
         connectTimeout = 30
         maxReconnectInterval = 10
         autoReconnect = true
-        writeTimeout = nil // nil represents timeout disabled
-        messageChannelDepth = 100
+        writeTimeout = nil
+        status = .disconnected
 
     }
 
-    mutating func addBroker(server: String) {
-        let brokerURI = server // url.Parse(server)
-        servers.append(NSURL(string: brokerURI)!)
+    mutating func addBroker(host: String, port: Int32) {
+        self.host = host
+        self.port = port
+    }
+    mutating func setUser(clientId: String, username: String? = nil, password: String? = nil){
+        self.clientId = clientId
+        self.username = username
+        self.password = password
     }
 }

@@ -19,23 +19,18 @@ import Foundation
 import Socket
 
 struct SubscribePacket {
-    var header: FixedHeader //bits 3,2,1,0 --> 0,0,1 and 0 respectively
-    var packetId: UInt16
+    var packetId: UInt16 = UInt16(random: true)
     var topics: [String]
     var qoss: [qosType]
 
-    init(header: FixedHeader, packetId: UInt16, topics: [String], qoss: [qosType]) {
-
-        self.header = header
-        self.packetId = packetId
+    init(topics: [String], qoss: [qosType]) {
         self.topics = topics
         self.qoss = qoss
 
     }
-    init(header: FixedHeader, data: Data) {
+    init(data: Data) {
         var data = data
 
-        self.header = header
         self.packetId = data.decodeUInt16
 
         var topics = [String]()
@@ -52,12 +47,13 @@ struct SubscribePacket {
 extension SubscribePacket : ControlPacket {
 
     var description: String {
-        return header.description
+        return String(ControlCode.subscribe)
     }
 
     mutating func write(writer: SocketWriter) throws {
-       guard var buffer = Data(capacity: 512) else {
-            throw NSError()
+       guard var packet = Data(capacity: 512),
+             var buffer = Data(capacity: 512) else {
+            throw ErrorCodes.errUnknown
         }
 
         buffer.append(packetId.data)
@@ -67,9 +63,12 @@ extension SubscribePacket : ControlPacket {
             buffer.append(qos.rawValue.data)
         }
 
-        header.remainingLength = buffer.count
+        packet.append(ControlCode.subscribe.rawValue.data)
 
-        var packet = header.pack()
+        for byte in buffer.count.toBytes {
+            packet.append(byte.data)
+        }
+
         packet.append(buffer)
 
         do {

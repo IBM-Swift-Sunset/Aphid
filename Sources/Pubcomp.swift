@@ -17,43 +17,32 @@
 import Foundation
 import Socket
 
-struct PubcompPacket {
-    var header: FixedHeader
-    var packetId: UInt16
-
-    init(header: FixedHeader, packetId: UInt16) {
-        self.header = header
-        self.packetId = packetId
-    }
-
-    init?(header: FixedHeader, data: Data) {
-        self.header = header
+struct PubcompPacket : ControlPacket {
+    var packetId: UInt16 = UInt16(random: true)
+    
+    init(){}
+    init?(data: Data) {
         packetId = UInt16(msb: data[0], lsb: data[1])
     }
-}
 
-extension PubcompPacket : ControlPacket {
     var description: String {
-        return header.description
+        return String(ControlCode.pubcomp)
     }
 
     mutating func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 128) else {
-            throw NSError()
+            throw ErrorCodes.errUnknown
         }
 
+        buffer.append(ControlCode.pubcomp.rawValue.data)
+        buffer.append(2.data)
         buffer.append(packetId.data)
-
-        header.remainingLength = 2
-
-        var packet = header.pack()
-        packet.append(buffer)
-
+        
         do {
-            try writer.write(from: packet)
+            try writer.write(from: buffer)
 
         } catch {
-            throw NSError()
+            throw error
 
         }
     }

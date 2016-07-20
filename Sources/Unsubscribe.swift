@@ -19,20 +19,15 @@ import Foundation
 import Socket
 
 struct UnsubscribePacket {
-    var header: FixedHeader
-    var packetId: UInt16
+    var packetId = UInt16(random: true)
     var topics: [String]
 
-    init(header: FixedHeader, packetId: UInt16, topics: [String]) {
-
-        self.header = header
-        self.packetId = packetId
+    init(topics: [String]) {
         self.topics = topics
     }
-    init(header: FixedHeader, data: Data) {
+    init(data: Data) {
         var data = data
 
-        self.header = header
         self.packetId = data.decodeUInt16
 
         var topics = [String]()
@@ -46,23 +41,28 @@ struct UnsubscribePacket {
 extension UnsubscribePacket : ControlPacket {
 
     var description: String {
-        return header.description
+        return String(ControlCode.unsubscribe)
     }
 
     mutating func write(writer: SocketWriter) throws {
 
-        guard var buffer = Data(capacity: 512) else {
-            throw NSError()
+        guard var packet = Data(capacity: 512),
+              var buffer = Data(capacity: 512) else {
+            throw ErrorCodes.errUnknown
         }
-
+        
         buffer.append(packetId.data)
 
         for i in 0..<topics.count {
             buffer.append(topics[i].data)
         }
 
-        header.remainingLength = buffer.count
-        var packet = header.pack()
+        packet.append(ControlCode.unsubscribe.rawValue.data)
+        
+        for byte in buffer.count.toBytes {
+            packet.append(byte.data)
+        }
+
         packet.append(buffer)
 
         do {

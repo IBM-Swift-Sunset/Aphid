@@ -18,54 +18,38 @@ import Foundation
 import Socket
 
 struct PublishPacket {
-    var header: FixedHeader
-    let dup: Bool
-    let qos: qosType
-    let willRetain: Bool
-    var topicName: String
-    var identifier: UInt16?
-    var payload: String
+    var controlByte: UInt8
+    
+    var qos: qosType
 
-    init(header: FixedHeader, dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false,
+    var topic: String
+    var identifier = UInt16(random: true)
+    var message: String
 
-        topicName: String, packetId: UInt16, payload: String = "") {
+    init(dup: Bool = false, qos: qosType = .atLeastOnce, willRetain: Bool = false, topic: String, message: String = "") {
 
-        var header = header
-        header.dup = dup
-        header.qos = qos.rawValue
-        header.retain = willRetain
+        controlByte = ControlCode.publish.rawValue | dup.toByte << 3 | qos.rawValue << 1 | willRetain.toByte
 
-        self.header = header
-        self.dup = dup
         self.qos = qos
-        self.willRetain = willRetain
-        self.topicName = topicName
-        self.identifier = packetId
-        self.payload = payload
+        self.topic = topic
+        self.message = message
+        
     }
 
-    init?(header: FixedHeader, data: Data) {
+    init?(header: Byte, bodyLength: Int, data: Data) {
         var data = data
 
-        self.header = header
-
-        dup = header.dup
-        qos = qosType(rawValue: header.qos)!
-        willRetain = header.retain
-
-        var payloadSize = header.remainingLength
-
-        topicName = data.decodeString
+        self.controlByte = header
+        self.qos = qosType(rawValue: controlByte & UInt8(0x08))!
+        
+        topic = data.decodeString
 
         if qos.rawValue > 0 {
             identifier = data.decodeUInt16
-            payloadSize -= topicName.characters.count + 4
 
-        } else {
-            payloadSize -= topicName.characters.count + 2
         }
 
-        payload = data.decodeSDataString
+        message = data.decodeSDataString
 
     }
 }
@@ -73,25 +57,26 @@ struct PublishPacket {
 extension PublishPacket: ControlPacket {
 
     var description: String {
-        return header.description
+        return String(ControlCode.publish)
     }
 
     mutating func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 512) else {
-            throw NSError()
+        guard var packet = Data(capacity: 512),
+              var buffer = Data(capacity: 512) else {
+            throw ErrorCodes.errUnknown
         }
-
-        buffer.append(topicName.data)
+        
+        buffer.append(topic.data)
 
         if qos.rawValue > 0 {
-            buffer.append(identifier!.data)
+            buffer.append(identifier.data)
         }
-
-        buffer.append(payload.sData)
-
-        header.remainingLength = buffer.count
-
-        var packet = header.pack()
+        
+        buffer.append(message.sData)
+        packet.append(controlByte.data)
+        for byte in buffer.count.toBytes {
+            packet.append(byte.data)
+        }
         packet.append(buffer)
 
         do {
@@ -101,7 +86,6 @@ extension PublishPacket: ControlPacket {
             throw NSError()
 
         }
-
     }
 
     mutating func unpack(reader: SocketReader) {

@@ -20,255 +20,203 @@ import Dispatch
 
 public typealias Byte = UInt8
 
-public enum connectionStatus: Int {
-    case connected = 1
-    case disconnected = -1
-    case connecting = 0
-}
-public struct LastWill {
-    let topic: String
-    let message: String?
-    let qos: qosType
-    let retain: Bool
-}
 // Aphid
 public class Aphid {
 
-    public var host = "localhost"
-    public var port: Int32 = 1883
-    public var clientId: String
-    public var username: String?
-    public var password: String?
-    public var secureMQTT: Bool = false
-    public var cleanSess: Bool
-    public var keepAliveTime = 15
-    public var will: LastWill? = nil
-    
-    public var status = connectionStatus.disconnected
-    public var config: Config
-
+    // User Configuration
     public var delegate: MQTTDelegate?
 
-    var outMessages = [UInt16:ControlPacket]()
-    var socket: Socket?
+    private var socket: Socket?
 
-    var buffer = Data()
+    private var buffer = Data()
 
-    var keepAliveTimer: DispatchSourceTimer? = nil
+    private var keepAliveTimer: DispatchSourceTimer? = nil
 
     public let readQueue: DispatchQueue
     public let writeQueue: DispatchQueue
-    public let timerQueue: DispatchQueue
 
-    public var isConnected: Bool {
-        get {
-            if status == .connected {
-                return true
-            } else {
-                return false
-            }
-        }
-    }
 
     private var bound = 2
 
     public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
          host: String = "localhost", port: Int32 = 1883) {
 
-        !cleanSess && (clientId == "") ? (self.clientId = NSUUID().uuidString) : (self.clientId = clientId)
+        let clientId = !cleanSess && (clientId == "") ? NSUUID().uuidString : clientId
 
-        self.config = Config(clientId: clientId, username: username, password: password, cleanSess: cleanSess)
-        self.username = username
-        self.password = password
-        self.cleanSess = cleanSess
+        Config.sharedInstance.setUser(clientId: clientId, username: username, password: password)
 
         readQueue = DispatchQueue(label: "read queue", attributes: .concurrent)
         writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
-        timerQueue = DispatchQueue(label: "timer queue", attributes: .concurrent)
 
     }
 
     // Initial Connect
-    public func connect() throws -> Bool {
+    public func connect() throws {
 
         socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
 
-        guard let sock = socket,
-              var connectPacket = newControlPacket(packetType: .connect) else {
-
-                throw NSError()
+        guard let sock = socket else {
+            throw ErrorCodes.errUnknown
         }
+        
         do {
+            var connectPacket = ConnectPacket()
+            
             try sock.setBlocking(mode: false)
 
-            try sock.connect(to: self.host, port: self.port)
+            try sock.connect(to: config.host, port: config.port)
 
             try connectPacket.write(writer: sock)
 
             self.read()
 
         } catch {
-            NSLog("Connection could not be made")
+            print("error")
 
         }
 
         startTimer()
 
-        status = .connected
+        config.status = connectionStatus.connected
 
-        return true
+        delegate?.didConnect()
+
     }
 
-    public func reconnect() -> Bool {
-        return true
+    public func reconnect() {
     }
 
     public func disconnect(uint: UInt) throws {
-
-        guard isConnected else {
-            NSLog("Already Disconnected")
-            return
+        
+        guard config.status != connectionStatus.disconnected else {
+            throw ErrorCodes.errAlreadyDisconnected
         }
 
-        guard let sock = socket,
-              var disconnectPacket = newControlPacket(packetType: .disconnect) else {
-                throw NSError()
+        guard let sock = socket else {
+            throw ErrorCodes.errUnknown
         }
-
+        
         writeQueue.sync {
             do {
+                let disconnectPacket = DisconnectPacket()
+
                 try disconnectPacket.write(writer: sock)
 
-                self.status = .disconnected
+                config.status = .disconnected
                 
+                // Look into waiting until it clears out the write queue then disconnect /
                 sock.close()
-                
+
                 buffer = Data()
+
                 keepAliveTimer = nil
 
             } catch {
-                NSLog("failure")
+                 print("error")
+
             }
         }
     }
 
-    public func publish(topic: String, withMessage message: String, qos: qosType, retained: Bool, dup: Bool) -> UInt16 {
+    public func publish(topic: String, withMessage message: String, qos: qosType, retained: Bool, dup: Bool) throws {
+        // Cant use Wildcards in topic names
 
-        let unusedID: UInt16 = UInt16(random: true)
-
-        guard let sock = socket,
-              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: message) else {
-
-                return 0
-        }
-        writeQueue.sync {
-            do {
-                try publishPacket.write(writer: sock)
-
-                self.outMessages[unusedID] = publishPacket
-
-                self.resetTimer()
-
-
-            } catch {
-
-            }
-        }
-
-        return 1
-    }
-
-    public func publish(topic: String, message: String) -> UInt16 {
-
-        let unusedID: UInt16 = UInt16(random: true)
-
-        guard let sock = socket,
-              var publishPacket = newControlPacket(packetType: .publish, topicName: topic, packetId: unusedID, message: message) else {
-
-                return 0
+        guard let sock = socket else {
+            throw ErrorCodes.errUnknown
         }
 
         writeQueue.sync {
             do {
-                try publishPacket.write(writer: sock)
+                var publishPacket = PublishPacket(topic: topic, message: message)
 
-                self.outMessages[unusedID] = publishPacket
+                try publishPacket.write(writer: sock)
 
                 self.resetTimer()
 
             } catch {
+                 print("error")
 
             }
         }
-
-        return 1
     }
 
-    public func subscribe(topic: [String], qoss: [qosType]) -> UInt16 {
-
-        let unusedID: UInt16 = UInt16(random: true)
-
-        guard let sock = socket,
-              var subscribePacket = newControlPacket(packetType: .subscribe, packetId: unusedID, topics: topic, qoss: qoss) else {
-
-                return 0
+    public func publish(topic: String, message: String) throws {
+        // Cant use Wildcards in topic names #
+        
+        guard let sock = socket else {
+            throw ErrorCodes.errUnknown
         }
 
         writeQueue.sync {
             do {
+                
+                var publishPacket = PublishPacket(topic: topic, message: message)
+                
+                try publishPacket.write(writer: sock)
+
+                self.resetTimer()
+
+            } catch {
+                 print("error")
+            }
+        }
+    }
+
+    public func subscribe(topic: [String], qoss: [qosType]) throws {
+        // Can use Wildcards in topic filters
+
+        guard let sock = socket else {
+                throw ErrorCodes.errUnknown
+        }
+
+        writeQueue.sync {
+            do {
+                var subscribePacket = SubscribePacket(topics: topic, qoss: qoss)
+                
                 try subscribePacket.write(writer: sock)
 
-                self.outMessages[unusedID] = subscribePacket
-
                 self.resetTimer()
 
             } catch {
-
+                 print("error")
             }
         }
-
-        return 1
     }
 
-    public func unsubscribe(topic: [String]) -> UInt16 {
+    public func unsubscribe(topics: [String]) throws {
 
-        let unusedID: UInt16 = UInt16(random: true)
-
-        guard let sock = socket,
-              var unsubscribePacket = newControlPacket(packetType: .unsubscribe, packetId: unusedID, topics: topic) else {
-
-                return 0
+        guard let sock = socket else {
+            throw ErrorCodes.errUnknown
         }
 
         writeQueue.sync {
             do {
+                var unsubscribePacket = UnsubscribePacket(topics: topics)
+                
                 try unsubscribePacket.write(writer: sock)
 
-                self.outMessages[unusedID] = unsubscribePacket
-
                 self.resetTimer()
 
             } catch {
-
+                 print("error")
             }
         }
-
-        return 1
     }
 
-    public func ping() {
-        guard let sock = socket,
-              var pingreqPacket = newControlPacket(packetType: .pingreq) else {
+    public func ping() throws {
 
-                return
+        guard let sock = socket else {
+            throw ErrorCodes.errUnknown
         }
 
         writeQueue.sync {
             do {
+                var pingreqPacket = PingreqPacket()
+                
                 try pingreqPacket.write(writer: sock)
 
             } catch {
-
+                 print("error")
             }
         }
     }
@@ -283,7 +231,7 @@ extension Aphid {
          retain: If set to true, the will message will be set as the "last known good"/retained message for the topic.
      */
     public func setWill(topic: String, message: String? = nil, willQoS: qosType = .atMostOnce, willRetain: Bool = false) {
-        will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
+        config.will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
     }
     public func read() {
 
@@ -315,40 +263,48 @@ extension Aphid {
             }
         }
     }
-
+    func parseHeader() -> (Byte, Int)? {
+        let data = buffer.subdata(in: Range(0..<bound))
+        
+        let controlByte: [Byte] = data.subdata(in: Range(0..<1)).map {
+            byte in
+            return byte
+        }
+        guard let length = decodeLength(data.subdata(in: Range(1..<bound))) else {
+            return nil
+        }
+        return (controlByte[0], length)
+    }
     func unpack() -> [ControlPacket]? {
 
         var packets = [ControlPacket]()
 
         while buffer.count >= 2 {
-
-            guard let header = FixedHeader(buffer.subdata(in: Range(0..<bound))) else {
+            
+            // See if we have enough bytes for the header
+            guard let (controlByte, bodyLength) = parseHeader() else {
                 bound += 1
                 return packets
             }
-            if buffer.count - header.remainingLength < 2 {
+            // Do we have all the bytes we need for the full packet?
+            let bytesNeeded = buffer.count - bodyLength - 2
+
+            if bytesNeeded < 0 {
                 return nil
             }
+            
+            let body = buffer.subdata(in: Range(bound..<bound + bodyLength))
 
-            let body = buffer.subdata(in: Range(bound..<bound + header.remainingLength))
-
-            buffer = buffer.subdata(in: Range(bound + header.remainingLength..<buffer.count))
-
-            let packet = newControlPacket(header: header, data: body)!
+            buffer = buffer.subdata(in: Range(bound + bodyLength..<buffer.count))
+            
+            let packet = newControlPacket(header: controlByte, bodyLength: bodyLength, data: body)!
 
             packets.append(packet)
 
             bound = 2
 
-            if packet is PublishPacket {
-                let p = packet as! PublishPacket
-
-                do {
-                    try delegate?.didReceiveMessage(topic: p.topicName, message: p.payload)
-
-                } catch {
-
-                }
+            if let packet = packet as? PublishPacket {
+                delegate?.didReceiveMessage(topic: packet.topic, message: packet.message)
             } else {
                 delegate?.didCompleteDelivery(token: packet.description)
             }
@@ -362,14 +318,18 @@ extension Aphid {
 
     func startTimer() {
 
-        keepAliveTimer = keepAliveTimer ?? DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: timerQueue)
+        keepAliveTimer = keepAliveTimer ?? DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: writeQueue)
 
-        keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(keepAliveTime), leeway: .milliseconds(500))
+        keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(Int(config.keepAlive)), leeway: .milliseconds(500))
 
         keepAliveTimer?.setEventHandler {
 
             self.writeQueue.async {
-                self.ping()
+                do {
+                    try self.ping()
+                } catch {
+                    
+                }
             }
         }
 
@@ -381,5 +341,43 @@ extension Aphid {
         keepAliveTimer?.cancel()
         keepAliveTimer = nil
         startTimer()
+    }
+}
+
+extension Aphid {
+    func newControlPacket(header: Byte, bodyLength: Int, data: Data) -> ControlPacket? {
+        let code: ControlCode = ControlCode(rawValue: (header & 0xF0))!
+        switch code {
+        case .connect:
+            return ConnectPacket(data: data)
+        case .connack:
+            return ConnackPacket(data: data)
+        case .publish:
+            return PublishPacket(header: header, bodyLength: bodyLength, data: data)
+        case .puback:
+            return PubackPacket(data: data)
+        case .pubrec:
+            return PubrecPacket(data: data)
+        case .pubrel:
+            return PubrelPacket(data: data)
+        case .pubcomp:
+            return PubcompPacket(data: data)
+        case .subscribe:
+            return SubscribePacket(data: data)
+        case .suback:
+            return SubackPacket(data: data)
+        case .unsubscribe:
+            return UnsubscribePacket(data: data)
+        case .unsuback:
+            return UnSubackPacket(data: data)
+        case .pingreq:
+            return PingreqPacket(data: data)
+        case .pingresp:
+            return PingrespPacket(data: data)
+        case .disconnect:
+            return DisconnectPacket(data: data)
+        default:
+            return ConnackPacket(data: data)
+        }
     }
 }

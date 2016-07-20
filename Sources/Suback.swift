@@ -19,18 +19,15 @@ import Foundation
 import Socket
 
 struct SubackPacket {
-    var header: FixedHeader
     var packetId: UInt16
     var returnCode: Byte
 
-    init(header: FixedHeader, packetId: UInt16, returnCode: Byte) {
-        self.header = header
+    init(packetId: UInt16, returnCode: Byte) {
         self.packetId = packetId
         self.returnCode = returnCode
     }
 
-    init?(header: FixedHeader, data: Data) {
-        self.header = header
+    init?(data: Data) {
         packetId = UInt16(msb: data[0], lsb: data[1])
         returnCode = data[2]
     }
@@ -40,26 +37,24 @@ struct SubackPacket {
 extension SubackPacket : ControlPacket {
 
     var description: String {
-        return "\(header.description) | ID: \(packetId)"
+        return String(ControlCode.suback)
     }
 
     mutating func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 128) else {
-            throw NSError()
+            throw ErrorCodes.errUnknown
         }
-
+        
+        buffer.append(ControlCode.suback.rawValue.data)
+        buffer.append(3.data)
         buffer.append(packetId.data)
-
-        header.remainingLength = 2
-
-        var packet = header.pack()
-        packet.append(buffer)
+        buffer.append(returnCode.data)
 
         do {
-            try writer.write(from: packet)
+            try writer.write(from: buffer)
 
         } catch {
-            throw NSError()
+            throw error
 
         }
     }

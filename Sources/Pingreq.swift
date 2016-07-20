@@ -18,26 +18,29 @@ import Foundation
 import Socket
 
 
-struct PingreqPacket {
-    let header: FixedHeader
+struct PingreqPacket: ControlPacket {
+    
+    init(){}
+    init(data: Data) {}
 
-    init(header: FixedHeader) {
-        self.header = header
-    }
-}
-
-extension PingreqPacket: ControlPacket {
     var description: String {
-        return header.description
+        return String(ControlCode.pingreq)
     }
 
     mutating func write(writer: SocketWriter) throws {
-        let packet = header.pack()
+
+        guard var buffer = Data(capacity: 2) else {
+            throw ErrorCodes.errUnknown
+        }
+
+        buffer.append(ControlCode.pingreq.rawValue.data)
+        buffer.append(0.data)
+
         do {
-            try writer.write(from: packet)
+            try writer.write(from: buffer)
 
         } catch {
-            NSLog(String(error))
+            throw error
 
         }
     }

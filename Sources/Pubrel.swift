@@ -18,51 +18,39 @@
 import Foundation
 import Socket
 
-struct PubrelPacket {
-    var header: FixedHeader
-    var packetId: UInt16
-
-    init(header: FixedHeader, packetId: UInt16) {
-        self.header = header
-        self.packetId = packetId
-    }
-
-    init?(header: FixedHeader, data: Data) {
-        self.header = header
+struct PubrelPacket : ControlPacket {
+    var packetId: UInt16 = UInt16(random: true)
+    
+    init(){}
+    init?(data: Data) {
         packetId = UInt16(msb: data[0], lsb: data[1])
     }
-}
-
-extension PubrelPacket : ControlPacket {
-
+    
     var description: String {
-        return header.description
+        return String(ControlCode.pubrel)
     }
-
+    
     mutating func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 128) else {
-            throw NSError()
+            throw ErrorCodes.errUnknown
         }
-
+        
+        buffer.append(ControlCode.pubrel.rawValue.data)
+        buffer.append(2.data)
         buffer.append(packetId.data)
-
-        header.remainingLength = 2
-
-        var packet = header.pack()
-        packet.append(buffer)
-
+        
         do {
-            try writer.write(from: packet)
-
+            try writer.write(from: buffer)
+            
         } catch {
-            throw NSError()
-
+            throw error
+            
         }
     }
-
+    
     mutating func unpack(reader: SocketReader) {
     }
-
+    
     func validate() -> ErrorCodes {
         return .accepted
     }

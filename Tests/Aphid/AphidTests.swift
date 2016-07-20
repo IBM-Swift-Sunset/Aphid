@@ -26,7 +26,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
     var pingCount = 0
     
     let topic = "/basilplant/"
-    let message = "Water Me Please!!"
+    let message = "Water Me Pretty Please!!"
    
     var expectation: XCTestExpectation!
     
@@ -54,7 +54,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         expectation = expectation(withDescription: "Received Connack")
 
         do {
-            let _ = try aphid.connect()
+            try aphid.connect()
 
         } catch {
 
@@ -104,9 +104,9 @@ class AphidTests: XCTestCase, MQTTDelegate {
         expectation = expectation(withDescription: "Received a message")
         
         do {
-            let _ = try aphid.connect()
-            let _ = aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
-            let _ = aphid.publish(topic: topic, message: message)
+            try aphid.connect()
+            try aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
+            try aphid.publish(topic: topic, message: message)
             
         } catch {
             
@@ -126,20 +126,22 @@ class AphidTests: XCTestCase, MQTTDelegate {
         testCase = "disconnect"
 
         do {
-            let _ = try aphid.connect()
-            let _ = try aphid.disconnect(uint: 1)
+            try aphid.connect()
+            try aphid.disconnect(uint: 1)
         } catch {
-            XCTAssert(1 == 2)
+
         }
     }
     
     // Protocol Functions
-    func didLoseConnection() throws {
+    func didLoseConnection() {
         print("connection lost")
     }
-
+    func didConnect() {
+        
+    }
     func didCompleteDelivery(token: String) {
-        if testCase == "connect" {
+        if testCase == "connect" && token == "connack"{
             expectation.fulfill()
         } else if testCase == "ping" {
             pingCount += 1
@@ -150,7 +152,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
     }
 
-    func didReceiveMessage(topic: String, message: String) throws {
+    func didReceiveMessage(topic: String, message: String) {
         if testCase == "SubscribePublish" && topic == self.topic && message == self.message {
             expectation.fulfill()
         }
