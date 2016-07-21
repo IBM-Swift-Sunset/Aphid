@@ -17,46 +17,43 @@
 import Foundation
 import Socket
 
-struct ConnectPacket {
+struct ConnectPacket: ControlPacket {
+    var will: LastWill? = nil
 
     init(){}
 
     init(data: Data) {
         var data = data
 
-        let protocolName = data.decodeString
-        let protocolVersion = data.decodeUInt8
+        let _ = data.decodeString    // protocol name
+        let _ = data.decodeUInt8     // protocolVersion
         let options = data.decodeUInt8
 
-        let reservedBit  = (1 & options).bool
-        let cleanSession = (1 & (options >> 1)).bool
+        let _  = (1 & options).bool       // reserved bit
+        let _ = (1 & (options >> 1)).bool // cleanSession
         let willFlag     = (1 & (options >> 2)).bool
         let willQoS      = QosType(rawValue: 3 & (options >> 3))!
         let willRetain   = (1 & (options >> 5)).bool
         let usernameFlag = (1 & (options >> 6)).bool
         let passwordFlag = (1 & (options >> 7)).bool
 
-        let keepAlive = data.decodeUInt16
+        let _ = data.decodeUInt16 // keepAlive
 
         //Payload
-        let clientId = data.decodeString
+        let _ = data.decodeString //clientID
 
         if willFlag {
             let willTopic = data.decodeString
             let willMessage = data.decodeString
-            let will = LastWill(topic: willTopic, message: willMessage, qos: willQoS, retain: willRetain)
+            self.will = LastWill(topic: willTopic, message: willMessage, qos: willQoS, retain: willRetain)
         }
         if usernameFlag {
-            let username = data.decodeString
+            let _ = data.decodeString
         }
         if passwordFlag {
-            let password = data.decodeString
+            let _ = data.decodeString
         }
     }
-
-}
-
-extension ConnectPacket : ControlPacket {
 
     var description: String {
         return String(ControlCode.connect)
@@ -108,7 +105,7 @@ extension ConnectPacket : ControlPacket {
     }
 
     func validate() -> ErrorCodes {
-        if config.username != nil && config.password != nil {
+        /*if config.username != nil && config.password != nil {
             return .errRefusedIDRejected
         }
         if true { // reservedBit
@@ -124,7 +121,7 @@ extension ConnectPacket : ControlPacket {
           config.username?.lengthOfBytes(using: String.Encoding.utf8) > 65535 ||
           config.password?.lengthOfBytes(using: String.Encoding.utf8) > 65535 {
            return .errRefusedBadProtocolVersion
-        }
+        }*/
         return .accepted
     }
 }

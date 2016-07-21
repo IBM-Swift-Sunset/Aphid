@@ -15,6 +15,7 @@
  */
 
 import Foundation
+import SSLService
 
 var config = Config.sharedInstance
 
@@ -50,6 +51,7 @@ public struct Config {
 	var writeTimeout: UInt16?
     var status: ConnectionStatus
     var will: LastWill? = nil
+    var SSLConfig: SSLService.Configuration? = nil
     
     let subscribePattern = "[a-z,0-9, ,+]+((/[a-z,0-9, ]+)|(/[+]))*[a-z,0-9, ]*(/#)?"
     let publishPattern = "[a-z,0-9, ]+(/[a-z,0-9, ]+)*"

@@ -16,6 +16,7 @@
 
 import Foundation
 import Socket
+import SSLService
 import Dispatch
 
 public typealias Byte = UInt8
@@ -44,31 +45,34 @@ public class Aphid {
 
         readQueue = DispatchQueue(label: "read queue", attributes: .concurrent)
         writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
-
+        
     }
 
     // Initial Connect
-    public func connect() throws {
+    public func connect(withSSL: Bool = false, certPath: String? = nil, keyPath: String? = nil) throws {
 
-        socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
+        if socket == nil {
+            socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
+
+        }
 
         guard let sock = socket else {
             throw ErrorCodes.errSocketNotOpen
         }
-        
+
         do {
             var connectPacket = ConnectPacket()
             
             try sock.setBlocking(mode: false)
 
             try sock.connect(to: config.host, port: config.port)
-
+            
             try connectPacket.write(writer: sock)
 
             read()
 
         } catch {
-            throw error
+            print("error")
 
         }
 
@@ -93,7 +97,7 @@ public class Aphid {
             throw ErrorCodes.errSocketNotOpen
         }
         
-        try writeQueue.sync {
+        writeQueue.async {
             do {
                 let disconnectPacket = DisconnectPacket()
 
@@ -105,12 +109,12 @@ public class Aphid {
 
                 sock.close()
 
-                buffer = Data()
+                self.buffer = Data()
 
-                keepAliveTimer = nil
+                self.keepAliveTimer = nil
 
             } catch {
-                 throw error
+                 print("error")
 
             }
         }
@@ -126,7 +130,7 @@ public class Aphid {
             throw ErrorCodes.errInvalidTopicName
         }
         
-        try writeQueue.sync {
+        writeQueue.async {
             do {
                 // Dup: we have to decide if this the first time this is sent or just a duplicate; not the user's job
                 var publishPacket = PublishPacket(topic: topic, message: message, dup: false, qos: qos, willRetain: retain)
@@ -134,13 +138,13 @@ public class Aphid {
                 try publishPacket.write(writer: sock)
                 
                 if qos ==  .atMostOnce{
-                    delegate?.didCompleteDelivery(token: String(publishPacket.identifier))
+                    self.delegate?.didCompleteDelivery(token: String(publishPacket.identifier))
                 }
 
-                resetTimer()
+                self.resetTimer()
                 
             } catch {
-                throw error
+                print("error")
                 
             }
         }
@@ -152,16 +156,16 @@ public class Aphid {
                 throw ErrorCodes.errSocketNotOpen
         }
 
-        try writeQueue.sync {
+        writeQueue.async {
             do {
                 var subscribePacket = SubscribePacket(topics: topic, qoss: qoss)
                 
                 try subscribePacket.write(writer: sock)
 
-                resetTimer()
+                self.resetTimer()
 
             } catch {
-                throw error
+                print("error")
 
             }
         }
@@ -173,16 +177,16 @@ public class Aphid {
             throw ErrorCodes.errSocketNotOpen
         }
 
-        try writeQueue.sync {
+        writeQueue.async {
             do {
                 var unsubscribePacket = UnsubscribePacket(topics: topics)
                 
                 try unsubscribePacket.write(writer: sock)
 
-                resetTimer()
+                self.resetTimer()
 
             } catch {
-                throw error
+                print("error")
 
             }
         }
@@ -194,14 +198,14 @@ public class Aphid {
             throw ErrorCodes.errSocketNotOpen
         }
 
-        try writeQueue.sync {
+        writeQueue.sync {
             do {
                 var pingreqPacket = PingreqPacket()
                 
                 try pingreqPacket.write(writer: sock)
 
             } catch {
-                throw error
+                print("error")
 
             }
         }
@@ -213,14 +217,14 @@ public class Aphid {
             throw ErrorCodes.errSocketNotOpen
         }
         
-        try writeQueue.sync {
+        writeQueue.async {
             do {
                 var pubrelPacket = PubrelPacket(packetId: packetId)
                 
                 try pubrelPacket.write(writer: sock)
                 
             } catch {
-                throw error
+                print("error")
 
             }
         }
@@ -314,7 +318,7 @@ extension Aphid {
                     try self.pubrel(packetId: p.packetId)
 
                 } catch {
-                    NSLog("Could Not Respond to Pubrex")
+                    print("Could Not Respond to Pubrex")
                 }
             default: delegate?.didCompleteDelivery(token: packet.description)
             }
@@ -392,3 +396,42 @@ extension Aphid {
         }
     }
 }
+// SSL Certification Initialization: Must be called before connect
+extension Aphid {
+
+    func setSSL(certPath: String? = nil, keyPath: String? = nil) throws {
+
+        let SSLConfig = SSLService.Configuration(withCACertificateDirectory: nil, usingCertificateFile: certPath, withKeyFile: keyPath)
+        
+        config.SSLConfig = SSLConfig
+
+         if socket == nil { socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp) }
+
+        socket?.delegate = try SSLService(usingConfiguration: SSLConfig)
+    }
+
+    func setSSL(with ChainFilePath: String, usingSelfSignedCert: Bool) throws {
+
+        let SSLConfig = SSLService.Configuration(withChainFilePath: ChainFilePath, usingSelfSignedCerts: usingSelfSignedCert)
+        
+        config.SSLConfig = SSLConfig
+
+        if socket == nil { socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp) }
+
+        socket?.delegate = try SSLService(usingConfiguration: SSLConfig)
+    }
+
+    func setSSL(with CACertificatePath: String?, using CertificateFile: String?, with KeyFile: String?, selfSignedCerts: Bool) throws {
+
+        let SSLConfig = SSLService.Configuration(withCACertificateFilePath: CACertificatePath,
+                                                usingCertificateFile: CertificateFile,
+                                                withKeyFile: KeyFile,
+                                                usingSelfSignedCerts: selfSignedCerts)
+        config.SSLConfig = SSLConfig
+
+        if socket == nil { socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp) }
+
+        socket?.delegate = try SSLService(usingConfiguration: SSLConfig)
+    }
+}
+    
