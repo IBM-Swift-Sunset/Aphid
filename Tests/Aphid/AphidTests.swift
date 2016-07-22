@@ -75,7 +75,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
 
         do {
-            try aphid.disconnect(uint: 1)
+            try aphid.disconnect()
             sleep(5)
         } catch {
             throw error
@@ -158,7 +158,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
 
         do {
             try aphid.connect()
-            try aphid.disconnect(uint: 1)
+            try aphid.disconnect()
         } catch {
             throw error
         }

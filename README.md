@@ -42,12 +42,14 @@
     Add `/usr/local/opt/openssl/lib` to its Library Search Paths
 
     Note: If interested in the test cases, `AphidTestCases` target will also need `/usr/local/opt/openssl/lib` added to its Library Search Paths
+
 4. In Sources/main.swift, import the Aphid module.
 
     ``` Swift
         import Aphid
     ```
 
+Note: build locally with `swift build -Xcc -I/usr/local/opt/openssl/include -Xlinker -L/usr/local/opt/openssl/lib`
 ## Usage
 
 Example usage can be found in our [AphidClient Repository](https://github.com/IBM-Swift/AphidClient)
