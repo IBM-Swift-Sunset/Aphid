@@ -72,7 +72,7 @@ public class Aphid {
             read()
 
         } catch {
-            print("error")
+            print(error)
 
         }
 
@@ -114,7 +114,7 @@ public class Aphid {
                 self.keepAliveTimer = nil
 
             } catch {
-                 print("error")
+                 print(error)
 
             }
         }
@@ -144,7 +144,7 @@ public class Aphid {
                 self.resetTimer()
                 
             } catch {
-                print("error")
+                print(error)
                 
             }
         }
@@ -165,7 +165,7 @@ public class Aphid {
                 self.resetTimer()
 
             } catch {
-                print("error")
+                print(error)
 
             }
         }
@@ -186,7 +186,7 @@ public class Aphid {
                 self.resetTimer()
 
             } catch {
-                print("error")
+                print(error)
 
             }
         }
@@ -205,7 +205,7 @@ public class Aphid {
                 try pingreqPacket.write(writer: sock)
 
             } catch {
-                print("error")
+                print(error)
 
             }
         }
@@ -224,7 +224,7 @@ public class Aphid {
                 try pubrelPacket.write(writer: sock)
                 
             } catch {
-                print("error")
+                print(error)
 
             }
         }

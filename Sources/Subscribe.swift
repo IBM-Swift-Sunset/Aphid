@@ -62,8 +62,9 @@ extension SubscribePacket : ControlPacket {
 
         for (topic, qos) in zip(topics, qoss) {
 
-            guard topic.matches(pattern: "[a-z,0-9, ,+]+((/[a-z,0-9, ]+)|(/[+]))*[a-z,0-9, ]*(/#)?") else {
-                throw ErrorCodes.errUnknown
+            guard topic.matches(pattern: config.subscribePattern) else {
+                print(topic)
+                throw ErrorCodes.errInvalidTopicName
             }
 
             buffer.append(topic.data)

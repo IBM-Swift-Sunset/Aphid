@@ -27,5 +27,5 @@ before_install:
 
 script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then swift build -Xcc -fblocks -Xlinker -rpath -Xlinker .build/debug  ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then swift build -Xcc -I/usr/local/opt/openssl/include fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then swift build -Xcc -I/usr/local/opt/openssl/include ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then swift test ; fi

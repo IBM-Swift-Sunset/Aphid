@@ -53,8 +53,8 @@ public struct Config {
     public var will: LastWill? = nil
     var SSLConfig: SSLService.Configuration? = nil
     
-    let subscribePattern = "[a-z,0-9, ,+]+((/[a-z,0-9, ]+)|(/[+]))*[a-z,0-9, ]*(/#)?"
-    let publishPattern = "[a-z,0-9, ]+(/[a-z,0-9, ]+)*"
+    let subscribePattern = "[A-Z,a-z,0-9, ,+]+((/[A-Z,a-z,0-9, ]+)|(/[+]))*[A-Z,a-z,0-9, ]*(/#)?"
+    let publishPattern = "[A-Z,a-z,0-9, ]+(/[A-Z,a-z,0-9, ]+)*"
 
     var flags: UInt8 {
         get {
