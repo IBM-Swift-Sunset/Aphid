@@ -22,7 +22,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then git clone -b experimental/foundation https://github.com/apple/swift-corelibs-libdispatch.git && cd swift-corelibs-libdispatch && git submodule init && git submodule update && sh autogen.sh && ./configure --with-swift-toolchain=${PWD}/../swift-DEVELOPMENT-SNAPSHOT-2016-06-20-a-ubuntu14.04/usr --prefix=${PWD}/../swift-DEVELOPMENT-SNAPSHOT-2016-06-20-a-ubuntu14.04/usr && make && make install && cd ..   ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo | sudo apt-add-repository ppa:mosquitto-dev/mosquitto-ppa  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update  ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install mosquitto  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y mosquitto  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mosquitto -c /etc/mosquitto/mosquitto.conf -d ; fi
 
 script:

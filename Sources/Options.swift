@@ -23,34 +23,34 @@ public struct Config {
     
     static var sharedInstance = Config()
     
-    var host = "localhost"
-    var port: Int32 = 1883
+    public var host = "localhost"
+    public var port: Int32 = 1883
     
-    var protocolName: String
-    var protocolVersion: UInt8
+    public var protocolName: String
+    public var protocolVersion: UInt8
     
-    var clientId: String
-    var username: String?
-    var password: String?
-    var dup: Bool
-    var qos: QosType
-    var retain: Bool
+    public var clientId: String
+    public var username: String?
+    public var password: String?
+    public var dup: Bool
+    public var qos: QosType
+    public var retain: Bool
 
-    var cleanSession: Bool
-    var secureMQTT: Bool = false
-    var willTopic: String?
-	var willPayload: [Byte]
-	var willQos: QosType
-	var willRetain: Bool
-	var keepAlive: UInt16
-	var pingTimeout: UInt16
-	var connectTimeout: UInt16
-	var maxReconnectInterval: UInt16
-	var autoReconnect: Bool
-    var quiesce: UInt32 = 10
-	var writeTimeout: UInt16?
-    var status: ConnectionStatus
-    var will: LastWill? = nil
+    public var cleanSession: Bool
+    public var secureMQTT: Bool = false
+    public var willTopic: String?
+	public var willPayload: [Byte]
+	public var willQos: QosType
+	public var willRetain: Bool
+	public var keepAlive: UInt16
+	public var pingTimeout: UInt16
+	public var connectTimeout: UInt16
+	public var maxReconnectInterval: UInt16
+	public var autoReconnect: Bool
+    public var quiesce: UInt32 = 10
+	public var writeTimeout: UInt16?
+    public var status: ConnectionStatus
+    public var will: LastWill? = nil
     var SSLConfig: SSLService.Configuration? = nil
     
     let subscribePattern = "[a-z,0-9, ,+]+((/[a-z,0-9, ]+)|(/[+]))*[a-z,0-9, ]*(/#)?"
