@@ -17,7 +17,7 @@
 import Foundation
 import SSLService
 
-var config = Config.sharedInstance
+public var config = Config.sharedInstance
 
 public struct Config {
     

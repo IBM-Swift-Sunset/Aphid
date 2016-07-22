@@ -87,7 +87,7 @@ public class Aphid {
     public func reconnect() {
     }
 
-    public func disconnect(uint: UInt) throws {
+    public func disconnect() throws {
         
         guard config.status != .disconnected else {
             throw ErrorCodes.errAlreadyDisconnected
@@ -399,7 +399,7 @@ extension Aphid {
 // SSL Certification Initialization: Must be called before connect
 extension Aphid {
 
-    func setSSL(certPath: String? = nil, keyPath: String? = nil) throws {
+    public func setSSL(certPath: String? = nil, keyPath: String? = nil) throws {
 
         let SSLConfig = SSLService.Configuration(withCACertificateDirectory: nil, usingCertificateFile: certPath, withKeyFile: keyPath)
         
@@ -410,7 +410,7 @@ extension Aphid {
         socket?.delegate = try SSLService(usingConfiguration: SSLConfig)
     }
 
-    func setSSL(with ChainFilePath: String, usingSelfSignedCert: Bool) throws {
+    public func setSSL(with ChainFilePath: String, usingSelfSignedCert: Bool) throws {
 
         let SSLConfig = SSLService.Configuration(withChainFilePath: ChainFilePath, usingSelfSignedCerts: usingSelfSignedCert)
         
@@ -421,7 +421,7 @@ extension Aphid {
         socket?.delegate = try SSLService(usingConfiguration: SSLConfig)
     }
 
-    func setSSL(with CACertificatePath: String?, using CertificateFile: String?, with KeyFile: String?, selfSignedCerts: Bool) throws {
+    public func setSSL(with CACertificatePath: String?, using CertificateFile: String?, with KeyFile: String?, selfSignedCerts: Bool) throws {
 
         let SSLConfig = SSLService.Configuration(withCACertificateFilePath: CACertificatePath,
                                                 usingCertificateFile: CertificateFile,
