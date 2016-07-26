@@ -39,9 +39,7 @@ extension ConnackPacket: ControlPacket {
 
     mutating func write(writer: SocketWriter) throws {
 
-        guard var buffer = Data(capacity: 128) else {
-            throw NSError()
-        }
+        var buffer = Data(capacity: 128)
         
         buffer.append(ControlCode.connack.rawValue.data)
         buffer.append(UInt8(2).data)

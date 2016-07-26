@@ -61,10 +61,8 @@ extension PublishPacket: ControlPacket {
     }
 
     mutating func write(writer: SocketWriter) throws {
-        guard var packet = Data(capacity: 512),
-              var buffer = Data(capacity: 512) else {
-            throw ErrorCodes.errUnknown
-        }
+        var packet = Data(capacity: 512)
+        var buffer = Data(capacity: 512)
         
         buffer.append(topic.data)
 

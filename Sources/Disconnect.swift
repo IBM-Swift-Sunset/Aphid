@@ -26,9 +26,7 @@ struct DisconnectPacket: ControlPacket {
         return String(ControlCode.disconnect)
     }
     func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 2) else {
-            throw ErrorCodes.errUnknown
-        }
+        var buffer = Data(capacity: 2)
         buffer.append(ControlCode.disconnect.rawValue.data)
         buffer.append(0.data)
         try writer.write(from: buffer)

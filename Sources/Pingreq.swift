@@ -26,9 +26,7 @@ struct PingreqPacket: ControlPacket {
 
     mutating func write(writer: SocketWriter) throws {
 
-        guard var buffer = Data(capacity: 2) else {
-            throw ErrorCodes.errUnknown
-        }
+        var buffer = Data(capacity: 2)
 
         buffer.append(ControlCode.pingreq.rawValue.data)
         buffer.append(0.data)

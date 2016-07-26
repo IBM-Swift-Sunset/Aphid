@@ -48,7 +48,7 @@ extension String {
     func matches(pattern: String!) -> Bool {
         
         do {
-            let regex = try RegularExpression(pattern: pattern, options: [])
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
             let nsString = self as NSString
             let results = regex.matches(in: self, range: NSMakeRange(0, nsString.length))
             if nsString.substring(with: results[0].range) == self {
@@ -175,11 +175,11 @@ func getBytes(_ value: Data) {
     }
 }
 
-func decodeString(_ reader: SocketReader) -> String {
+/*func decodeString(_ reader: SocketReader) -> String {
     let fieldLength = decodeUInt16(reader)
     let field = NSMutableData(capacity: Int(fieldLength))
     do {
-        let _ = try reader.read(into: field!)
+        let _ = try reader.read(into: field! as Data)
     } catch {
         
     }
@@ -189,7 +189,7 @@ func decodeString(_ reader: SocketReader) -> String {
 func decodeUInt8(_ reader: SocketReader) -> UInt8 {
     let num = NSMutableData(capacity: 1)
     do {
-        let _ = try reader.read(into: num!)
+        let _ = try reader.read(into: num! as Data)
     } catch {
         
     }
@@ -210,7 +210,7 @@ public func decode<T>(_ data: NSData) -> T {
     let pointer = UnsafeMutablePointer<T>(allocatingCapacity: sizeof(T.self))
     data.getBytes(pointer, length: sizeof(T.self))
     return pointer.move()
-}
+}*/
 
 func decodeLength(_ data: Data) -> Int? {
     var data = data

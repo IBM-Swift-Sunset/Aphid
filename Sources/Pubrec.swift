@@ -32,9 +32,7 @@ struct PubrecPacket : ControlPacket {
     }
     
     mutating func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 128) else {
-            throw ErrorCodes.errUnknown
-        }
+        var buffer = Data(capacity: 128)
         
         buffer.append(ControlCode.pubrec.rawValue.data)
         buffer.append(2.data)

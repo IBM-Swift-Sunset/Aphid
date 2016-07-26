@@ -41,9 +41,7 @@ extension SubackPacket : ControlPacket {
     }
 
     mutating func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 128) else {
-            throw ErrorCodes.errUnknown
-        }
+        var buffer = Data(capacity: 128)
         
         buffer.append(ControlCode.suback.rawValue.data)
         buffer.append(3.data)
