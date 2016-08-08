@@ -16,7 +16,6 @@
 
 import Foundation
 import Socket
-import Glibc
 
 extension SocketWriter {
     func write(from data: Data) throws {
@@ -57,8 +56,8 @@ extension String {
         do {
             let regex = try RegularExpression(pattern: pattern, options: [])
             // let nsString = self as NSString
-            let results = regex.matches(in: self, options: NSMatchingOptions.reportProgress, range: NSMakeRange(0, self.length))
-            return results
+            let results = regex.numberOfMatches(in: self, options: NSMatchingOptions.reportProgress, range: NSMakeRange(0, 300))
+            return results > 0
         } catch {
             print("Malformed Expression")
         }
@@ -111,8 +110,9 @@ extension UInt8 {
 extension UInt16 {
     
     init(random: Bool) {
-        var r: UInt16 = 0
-        arc4random_buf(&r, sizeof(UInt16.self))
+        let r: UInt16 = 0
+        // TODO: to fix
+        // arc4random_buf(&r, sizeof(UInt16.self))
         self = r
     }
     
@@ -212,7 +212,7 @@ func decodeUInt16(_ reader: SocketReader) -> UInt16 {
 }
 
 public func decode<T>(_ data: NSData) -> T {
-    let pointer = UnsafeMutablePointer<T>.allocate(capacity: sizeof(T.self))
+    let pointer = UnsafeMutablePointer<T>.allocate(capacity: MemoryLayout<T>.size)
     //data.getBytes(pointer, length: sizeof(T.self))
     data.getBytes(pointer, length: MemoryLayout<T>.size)
     return pointer.move()
