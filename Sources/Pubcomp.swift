@@ -20,7 +20,7 @@ import Socket
 struct PubcompPacket : ControlPacket {
     var packetId: UInt16
     
-    init(packetId: UInt16 = UInt16(random: true)){
+    init(packetId: UInt16 = UInt16.random){
         self.packetId = packetId
     }
 
@@ -33,9 +33,14 @@ struct PubcompPacket : ControlPacket {
     }
 
     mutating func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 128) else {
-            throw ErrorCodes.errUnknown
-        }
+
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var buffer = Data(capacity: 128)
+        #elseif os(Linux)
+            guard var buffer = Data(capacity: 128) else {
+                throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
 
         buffer.append(ControlCode.pubcomp.rawValue.data)
         buffer.append(2.data)

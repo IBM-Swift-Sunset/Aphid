@@ -23,7 +23,7 @@ struct PublishPacket {
     var qos: QosType
 
     var topic: String
-    var identifier = UInt16(random: true)
+    var identifier = UInt16.random
     var message: String
 
     init(topic: String, message: String = "", dup: Bool = false, qos: QosType = .atLeastOnce, willRetain: Bool = false) {
@@ -61,10 +61,16 @@ extension PublishPacket: ControlPacket {
     }
 
     mutating func write(writer: SocketWriter) throws {
-        guard var packet = Data(capacity: 512),
-              var buffer = Data(capacity: 512) else {
-            throw ErrorCodes.errUnknown
-        }
+
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var packet = Data(capacity: 512)
+            var buffer = Data(capacity: 512)
+        #elseif os(Linux)
+            guard var packet = Data(capacity: 512),
+                var buffer = Data(capacity: 512) else {
+                    throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
         
         buffer.append(topic.data)
 
@@ -86,7 +92,7 @@ extension PublishPacket: ControlPacket {
             try writer.write(from: packet)
 
         } catch {
-            throw AphidError()
+            throw ErrorCodes.errCouldNotInitializeData
 
         }
     }

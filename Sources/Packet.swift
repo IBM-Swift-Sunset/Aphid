@@ -14,7 +14,6 @@
  limitations under the License.
  */
 
-import Foundation
 import Socket
 
 
@@ -56,6 +55,7 @@ public enum ErrorCodes: Byte, Error {
     case errAlreadyDisconnected         = 0x08
     case errSocketNotOpen               = 0x09
     case errInvalidTopicName            = 0x0a
+    case errCouldNotInitializeData      = 0x0b
 }
 
 public enum ConnectionStatus: Int {
