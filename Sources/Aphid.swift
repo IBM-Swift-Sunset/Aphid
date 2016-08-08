@@ -25,16 +25,16 @@ public class Aphid {
 
     public var delegate: MQTTDelegate?
 
-    private var socket: Socket?
+    var socket: Socket?
 
-    private var buffer = Data()
+    var buffer = Data()
 
-    private var keepAliveTimer: DispatchSourceTimer? = nil
+    var keepAliveTimer: DispatchSourceTimer? = nil
 
-    public let readQueue: DispatchQueue
-    public let writeQueue: DispatchQueue
+    let readQueue: DispatchQueue
+    let writeQueue: DispatchQueue
 
-    private var bound = 2
+    var bound = 2
 
     public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
          host: String = "localhost", port: Int32 = 1883) {
@@ -211,7 +211,7 @@ public class Aphid {
         }
     }
     
-    private func pubrel(packetId: UInt16) throws {
+    internal func pubrel(packetId: UInt16) throws {
 
         guard let sock = socket else {
             throw ErrorCodes.errSocketNotOpen
