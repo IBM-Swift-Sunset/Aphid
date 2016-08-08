@@ -27,6 +27,6 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mosquitto -c /etc/mosquitto/mosquitto.conf -d ; fi
 
 script:
-  #- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then swift build -Xcc -fblocks -Xlinker -rpath -Xlinker .build/debug  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then swift build -Xcc -fblocks -Xlinker -rpath -Xlinker .build/debug  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then swift build -Xcc -I/usr/local/opt/openssl/include -Xlinker -L/usr/local/opt/openssl/lib ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then swift test ; fi
