@@ -41,7 +41,7 @@ struct UnsubscribePacket {
 extension UnsubscribePacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.unsubscribe)
+        return String(describing: ControlCode.unsubscribe)
     }
 
     mutating func write(writer: SocketWriter) throws {

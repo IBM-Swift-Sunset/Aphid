@@ -29,7 +29,7 @@ struct PubcompPacket : ControlPacket {
     }
 
     var description: String {
-        return String(ControlCode.pubcomp)
+        return String(describing: ControlCode.pubcomp)
     }
 
     mutating func write(writer: SocketWriter) throws {

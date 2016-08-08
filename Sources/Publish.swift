@@ -57,7 +57,7 @@ struct PublishPacket {
 extension PublishPacket: ControlPacket {
 
     var description: String {
-        return String(ControlCode.publish)
+        return String(describing: ControlCode.publish)
     }
 
     mutating func write(writer: SocketWriter) throws {
@@ -86,7 +86,7 @@ extension PublishPacket: ControlPacket {
             try writer.write(from: packet)
 
         } catch {
-            throw NSError()
+            throw AphidError()
 
         }
     }

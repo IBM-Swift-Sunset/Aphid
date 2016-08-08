@@ -34,13 +34,13 @@ struct ConnackPacket {
 extension ConnackPacket: ControlPacket {
 
     var description: String {
-        return String(ControlCode.connack)
+        return String(describing: ControlCode.connack)
     }
 
     mutating func write(writer: SocketWriter) throws {
 
         guard var buffer = Data(capacity: 128) else {
-            throw NSError()
+            throw AphidError()
         }
         
         buffer.append(ControlCode.connack.rawValue.data)

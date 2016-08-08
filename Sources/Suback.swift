@@ -37,7 +37,7 @@ struct SubackPacket {
 extension SubackPacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.suback)
+        return String(describing: ControlCode.suback)
     }
 
     mutating func write(writer: SocketWriter) throws {

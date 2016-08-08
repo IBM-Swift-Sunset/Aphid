@@ -23,7 +23,7 @@ struct DisconnectPacket: ControlPacket {
     init(data: Data) {}
 
     var description: String {
-        return String(ControlCode.disconnect)
+        return String(describing: ControlCode.disconnect)
     }
     func write(writer: SocketWriter) throws {
         guard var buffer = Data(capacity: 2) else {

@@ -33,7 +33,7 @@ struct UnSubackPacket {
 extension UnSubackPacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.unsuback)
+        return String(describing: ControlCode.unsuback)
     }
 
     mutating func write(writer: SocketWriter) throws {
@@ -51,7 +51,7 @@ extension UnSubackPacket : ControlPacket {
             try writer.write(from: buffer)
 
         } catch {
-            throw NSError()
+            throw AphidError()
 
         }
     }

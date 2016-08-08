@@ -56,14 +56,14 @@ struct ConnectPacket: ControlPacket {
     }
 
     var description: String {
-        return String(ControlCode.connect)
+        return String(describing: ControlCode.connect)
     }
 
     mutating func write(writer: SocketWriter) throws {
 
         guard var packet = Data(capacity: 512),
               var buffer = Data(capacity: 512) else {
-            throw NSError()
+            throw AphidError()
         }
         buffer.append(config.protocolName.data)
         buffer.append(config.protocolVersion.data)

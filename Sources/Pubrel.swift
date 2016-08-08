@@ -29,7 +29,7 @@ struct PubrelPacket : ControlPacket {
     }
     
     var description: String {
-        return String(ControlCode.pubrel)
+        return String(describing: ControlCode.pubrel)
     }
     
     mutating func write(writer: SocketWriter) throws {

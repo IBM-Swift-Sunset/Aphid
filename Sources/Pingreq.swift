@@ -21,7 +21,7 @@ import Socket
 struct PingreqPacket: ControlPacket {
 
     var description: String {
-        return String(ControlCode.pingreq)
+        return String(describing: ControlCode.pingreq)
     }
 
     mutating func write(writer: SocketWriter) throws {

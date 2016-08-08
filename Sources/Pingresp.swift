@@ -21,7 +21,7 @@ import Socket
 struct PingrespPacket: ControlPacket {
 
     var description: String {
-        return String(ControlCode.pingresp)
+        return String(describing: ControlCode.pingresp)
     }
     
     mutating func write(writer: SocketWriter) throws {

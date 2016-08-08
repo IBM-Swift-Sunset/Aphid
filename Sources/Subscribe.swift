@@ -49,7 +49,7 @@ struct SubscribePacket {
 extension SubscribePacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.subscribe)
+        return String(describing: ControlCode.subscribe)
     }
 
     mutating func write(writer: SocketWriter) throws {
@@ -83,7 +83,7 @@ extension SubscribePacket : ControlPacket {
             try writer.write(from: packet)
 
         } catch {
-            throw NSError()
+            throw AphidError()
 
         }
 

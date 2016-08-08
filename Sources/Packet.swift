@@ -43,7 +43,7 @@ public enum ControlCode: Byte {
     case reserved   = 0xf0
 }
 
-public enum ErrorCodes: Byte, ErrorProtocol {
+public enum ErrorCodes: Byte, Error {
     case accepted                       = 0x00
     case errRefusedBadProtocolVersion   = 0x01
     case errRefusedIDRejected           = 0x02

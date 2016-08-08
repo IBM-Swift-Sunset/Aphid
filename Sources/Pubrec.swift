@@ -28,7 +28,7 @@ struct PubrecPacket : ControlPacket {
      }
     
     var description: String {
-        return String(ControlCode.pubrec)
+        return String(describing: ControlCode.pubrec)
     }
     
     mutating func write(writer: SocketWriter) throws {

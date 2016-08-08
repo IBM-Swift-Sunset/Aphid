@@ -31,7 +31,7 @@ struct PubackPacket {
 extension PubackPacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.puback)
+        return String(describing: ControlCode.puback)
     }
 
     mutating func write(writer: SocketWriter) throws {

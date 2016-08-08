@@ -43,8 +43,8 @@ public class Aphid {
 
         Config.sharedInstance.setUser(clientId: clientId, username: username, password: password)
 
-        readQueue = DispatchQueue(label: "read queue", attributes: .concurrent)
-        writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
+        readQueue = DispatchQueue(label: "read queue", attributes: DispatchQueue.concurrent)
+        writeQueue = DispatchQueue(label: "write queue", attributes: DispatchQueue.concurrent)
         
     }
 
