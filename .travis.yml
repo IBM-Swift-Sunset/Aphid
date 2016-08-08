@@ -9,7 +9,7 @@ matrix:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update   ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install http-parser curl mosquitto  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install http-parser curl mosquitto openssl ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget https://swift.org/builds/development/xcode/swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a/swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-osx.pkg    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then sudo installer -pkg swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-osx.pkg -target /    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH=/Library/Developer/Toolchains/swift-latest.xctoolchain/usr/bin:"${PATH}"    ; fi
