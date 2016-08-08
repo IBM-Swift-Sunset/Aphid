@@ -1,8 +1,10 @@
-![](https://img.shields.io/badge/Swift-3.0-orange.svg?style=flat)
-![](https://img.shields.io/badge/Snapshot-6/20-blue.svg?style=flat)
 # Aphid
 
-> A lightweight MQTT 3.1.1 client written in pure Swift 3.
+A lightweight MQTT 3.1.1 client written in pure Swift 3.
+
+[![Build Status](https://travis-ci.org/IBM-Swift/Aphid.svg?branch=migration%2F8-04)](https://travis-ci.org/IBM-Swift/Aphid)
+![](https://img.shields.io/badge/Swift-3.0-orange.svg?style=flat)
+![](https://img.shields.io/badge/Snapshot-8/04-blue.svg?style=flat)
 
 ## Features:
 
@@ -21,7 +23,7 @@
 
 ## Setup
 
-> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-06-20-a toolchain` (Minimum REQUIRED for latest release)
+> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a toolchain` (Minimum REQUIRED for latest release)
 
 1. Install openssl on macOS with `brew install openssl` or on linux with `sudo apt-get install openssl`
 
