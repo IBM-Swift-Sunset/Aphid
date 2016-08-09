@@ -15,11 +15,11 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH=/Library/Developer/Toolchains/swift-latest.xctoolchain/usr/bin:"${PATH}"    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf -d   ; fi
 
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt-get update && sudo apt-get install g++-4.9; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget https://swift.org/builds/development/ubuntu1404/swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a/swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-ubuntu14.04.tar.gz    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar xzvf swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-ubuntu14.04.tar.gz    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-ubuntu14.04/usr/bin:$PATH    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -y install clang libicu-dev libkqueue-dev libtool libcurl4-openssl-dev libbsd-dev libblocksruntime-dev build-essential libwrap0-dev libssl-dev libc-ares-dev uuid-dev xsltproc ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -y install clang-3.9 lldb-3.9 clang libicu-dev libkqueue-dev libtool libcurl4-openssl-dev libbsd-dev libblocksruntime-dev build-essential libwrap0-dev libssl-dev libc-ares-dev uuid-dev xsltproc ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then git clone https://github.com/apple/swift-corelibs-libdispatch.git && cd swift-corelibs-libdispatch && git submodule init && git submodule update && sh autogen.sh && ./configure --with-swift-toolchain=${PWD}/../swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-ubuntu14.04/usr --prefix=${PWD}/../swift-DEVELOPMENT-SNAPSHOT-2016-08-04-a-ubuntu14.04/usr && make && make install && cd ..   ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo | sudo apt-add-repository ppa:mosquitto-dev/mosquitto-ppa  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update  ; fi
