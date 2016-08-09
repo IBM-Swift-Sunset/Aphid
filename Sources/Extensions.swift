@@ -116,7 +116,6 @@ extension UInt16 {
     
     static var random: UInt16 {
         #if os(Linux)
-            let x = rand()
             return UInt16(rand() % Int32(UInt16.max))
         #else
             return UInt16(arc4random_uniform(UInt32(UInt16(max))))

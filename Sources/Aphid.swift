@@ -46,13 +46,7 @@ public class Aphid {
         readQueue = DispatchQueue(label: "read queue", attributes: DispatchQueue.Attributes.concurrent)
         writeQueue = DispatchQueue(label: "write queue", attributes: DispatchQueue.Attributes.concurrent)
         
-        #if os(macOS) || os(iOS) || os(watchOS)
-            buffer = Data()
-        #elseif os(Linux)
-            guard buffer = Data() else {
-                throw ErrorCodes.errCouldNotInitializeData
-            }
-        #endif
+        buffer = Data()
     }
 
     // Initial Connect
