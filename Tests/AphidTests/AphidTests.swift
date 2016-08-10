@@ -18,6 +18,12 @@
 import XCTest
 @testable import Aphid
 
+#if os(OSX) || os(iOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
+
 class AphidTests: XCTestCase, MQTTDelegate {
 
     private var aphid: Aphid!
