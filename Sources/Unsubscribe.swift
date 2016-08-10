@@ -19,7 +19,7 @@ import Foundation
 import Socket
 
 struct UnsubscribePacket {
-    var packetId = UInt16(random: true)
+    var packetId = UInt16.random
     var topics: [String]
 
     init(topics: [String]) {
@@ -41,15 +41,20 @@ struct UnsubscribePacket {
 extension UnsubscribePacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.unsubscribe)
+        return String(describing: ControlCode.unsubscribe)
     }
 
     mutating func write(writer: SocketWriter) throws {
 
-        guard var packet = Data(capacity: 512),
-              var buffer = Data(capacity: 512) else {
-            throw ErrorCodes.errUnknown
-        }
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var packet = Data(capacity: 512)
+            var buffer = Data(capacity: 512)
+        #elseif os(Linux)
+            guard var packet = Data(capacity: 512),
+                var buffer = Data(capacity: 512) else {
+                    throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
         
         buffer.append(packetId.data)
 

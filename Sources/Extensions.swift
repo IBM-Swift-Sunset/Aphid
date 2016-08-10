@@ -17,6 +17,12 @@
 import Foundation
 import Socket
 
+extension SocketWriter {
+    func write(from data: Data) throws {
+        try self.write(from: NSData(data: data))
+    }
+}
+
 extension Bool {
     
     var toByte: Byte {
@@ -48,15 +54,18 @@ extension String {
     func matches(pattern: String!) -> Bool {
         
         do {
-            let regex = try RegularExpression(pattern: pattern, options: [])
-            let nsString = self as NSString
-            let results = regex.matches(in: self, range: NSMakeRange(0, nsString.length))
-            if nsString.substring(with: results[0].range) == self {
-                return true
-            }
+            #if os(Linux)
+                let regex = try RegularExpression(pattern: pattern, options: [])
+                let results = regex.numberOfMatches(in: self, options: .reportProgress, range: NSMakeRange(0, self.characters.count))
+            #else
+                let regex = try NSRegularExpression(pattern: pattern, options: [])
+                let results = regex.numberOfMatches(in: self, options: NSRegularExpression.MatchingOptions.reportProgress, range: NSMakeRange(0, self.characters.count))
+            #endif
+            return results > 0
         } catch {
-            NSLog("Malformed Expression")
+            print("Malformed Expression")
         }
+        
         return false
     }
 }
@@ -105,10 +114,12 @@ extension UInt8 {
 
 extension UInt16 {
     
-    init(random: Bool) {
-        var r: UInt16 = 0
-        arc4random_buf(&r, sizeof(UInt16.self))
-        self = r
+    static var random: UInt16 {
+        #if os(Linux)
+            return UInt16(rand() % Int32(UInt16.max))
+        #else
+            return UInt16(arc4random_uniform(UInt32(UInt16(max))))
+        #endif
     }
     
     init(msb: Byte, lsb: Byte) {
@@ -117,18 +128,13 @@ extension UInt16 {
     
     var data: Data {
         var data = Data()
-        var bytes: [UInt8] = [0x00, 0x00]
-        bytes[0] = UInt8(self >> 8)
-        bytes[1] = UInt8(self & 0x00ff)
+        let bytes: [UInt8] = [UInt8(self >> 8), UInt8(self & 0x00ff)]
         data.append(Data(bytes: bytes, count: 2))
         return data
     }
     
     var bytes: [Byte] {
-        var bytes: [UInt8] = [0x00, 0x00]
-        bytes[0] = UInt8(self >> 8)
-        bytes[1] = UInt8(self & 0x00ff)
-        return bytes
+        return [UInt8(self >> 8), UInt8(self & 0x00ff)]
     }
 }
 
@@ -162,56 +168,6 @@ extension Data {
 }
 
 // Unused Helper Functions
-
-func getBytes(_ value: Data) {
-    value.enumerateBytes() {
-        buffer, byteIndex, stop in
-        
-        print(buffer.first!)
-        
-        if byteIndex == value.count {
-            stop = true
-        }
-    }
-}
-
-func decodeString(_ reader: SocketReader) -> String {
-    let fieldLength = decodeUInt16(reader)
-    let field = NSMutableData(capacity: Int(fieldLength))
-    do {
-        let _ = try reader.read(into: field!)
-    } catch {
-        
-    }
-    return String(field)
-}
-
-func decodeUInt8(_ reader: SocketReader) -> UInt8 {
-    let num = NSMutableData(capacity: 1)
-    do {
-        let _ = try reader.read(into: num!)
-    } catch {
-        
-    }
-    return decode(num!)
-}
-
-func decodeUInt16(_ reader: SocketReader) -> UInt16 {
-    let uint = NSMutableData(capacity: 2)
-    do {
-        let _ = try reader.read(into: uint!)
-    } catch {
-        
-    }
-    return decode(uint!)
-}
-
-public func decode<T>(_ data: NSData) -> T {
-    let pointer = UnsafeMutablePointer<T>(allocatingCapacity: sizeof(T.self))
-    data.getBytes(pointer, length: sizeof(T.self))
-    return pointer.move()
-}
-
 func decodeLength(_ data: Data) -> Int? {
     var data = data
     var rLength: UInt32 = 0

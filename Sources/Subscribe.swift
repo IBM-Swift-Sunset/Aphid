@@ -19,7 +19,7 @@ import Foundation
 import Socket
 
 struct SubscribePacket {
-    var packetId: UInt16 = UInt16(random: true)
+    var packetId: UInt16 = UInt16.random
     var topics: [String]
     var qoss: [QosType]
 
@@ -49,14 +49,20 @@ struct SubscribePacket {
 extension SubscribePacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.subscribe)
+        return String(describing: ControlCode.subscribe)
     }
 
     mutating func write(writer: SocketWriter) throws {
-       guard var packet = Data(capacity: 512),
-             var buffer = Data(capacity: 512) else {
-            throw ErrorCodes.errUnknown
-        }
+
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var packet = Data(capacity: 512)
+            var buffer = Data(capacity: 512)
+        #elseif os(Linux)
+            guard var packet = Data(capacity: 512),
+                var buffer = Data(capacity: 512) else {
+                    throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
 
         buffer.append(packetId.data)
 
@@ -83,7 +89,7 @@ extension SubscribePacket : ControlPacket {
             try writer.write(from: packet)
 
         } catch {
-            throw NSError()
+            throw error
 
         }
 

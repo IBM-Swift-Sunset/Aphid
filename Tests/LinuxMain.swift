@@ -1,5 +1,5 @@
 import XCTest
-@testable import AphidTestSuite
+@testable import AphidTests
 
 XCTMain([
      testCase(AphidTests.allTests),

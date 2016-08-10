@@ -56,15 +56,22 @@ struct ConnectPacket: ControlPacket {
     }
 
     var description: String {
-        return String(ControlCode.connect)
+        return String(describing: ControlCode.connect)
     }
 
     mutating func write(writer: SocketWriter) throws {
 
-        guard var packet = Data(capacity: 512),
-              var buffer = Data(capacity: 512) else {
-            throw NSError()
-        }
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var packet = Data(capacity: 512)
+            var buffer = Data(capacity: 512)
+
+        #elseif os(Linux)
+            guard var packet = Data(capacity: 512),
+                var buffer = Data(capacity: 512) else {
+                    throw ErrorCodes.errCouldNotInitializeData
+                }
+        #endif
+
         buffer.append(config.protocolName.data)
         buffer.append(config.protocolVersion.data)
         buffer.append(config.flags.data)

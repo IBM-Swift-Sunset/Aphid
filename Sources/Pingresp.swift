@@ -21,14 +21,18 @@ import Socket
 struct PingrespPacket: ControlPacket {
 
     var description: String {
-        return String(ControlCode.pingresp)
+        return String(describing: ControlCode.pingresp)
     }
     
     mutating func write(writer: SocketWriter) throws {
         
-        guard var buffer = Data(capacity: 2) else {
-            throw ErrorCodes.errUnknown
-        }
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var buffer = Data(capacity: 2)
+        #elseif os(Linux)
+            guard var buffer = Data(capacity: 2) else {
+                throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
         
         buffer.append(ControlCode.pingresp.rawValue.data)
         buffer.append(0.data)

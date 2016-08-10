@@ -28,13 +28,18 @@ struct PubrecPacket : ControlPacket {
      }
     
     var description: String {
-        return String(ControlCode.pubrec)
+        return String(describing: ControlCode.pubrec)
     }
     
     mutating func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 128) else {
-            throw ErrorCodes.errUnknown
-        }
+
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var buffer = Data(capacity: 128)
+        #elseif os(Linux)
+            guard var buffer = Data(capacity: 128) else {
+                throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
         
         buffer.append(ControlCode.pubrec.rawValue.data)
         buffer.append(2.data)

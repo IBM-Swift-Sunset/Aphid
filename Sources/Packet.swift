@@ -14,7 +14,6 @@
  limitations under the License.
  */
 
-import Foundation
 import Socket
 
 
@@ -43,7 +42,7 @@ public enum ControlCode: Byte {
     case reserved   = 0xf0
 }
 
-public enum ErrorCodes: Byte, ErrorProtocol {
+public enum ErrorCodes: Byte, Error {
     case accepted                       = 0x00
     case errRefusedBadProtocolVersion   = 0x01
     case errRefusedIDRejected           = 0x02
@@ -56,6 +55,7 @@ public enum ErrorCodes: Byte, ErrorProtocol {
     case errAlreadyDisconnected         = 0x08
     case errSocketNotOpen               = 0x09
     case errInvalidTopicName            = 0x0a
+    case errCouldNotInitializeData      = 0x0b
 }
 
 public enum ConnectionStatus: Int {

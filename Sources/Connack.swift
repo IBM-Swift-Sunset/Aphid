@@ -34,14 +34,18 @@ struct ConnackPacket {
 extension ConnackPacket: ControlPacket {
 
     var description: String {
-        return String(ControlCode.connack)
+        return String(describing: ControlCode.connack)
     }
 
     mutating func write(writer: SocketWriter) throws {
 
-        guard var buffer = Data(capacity: 128) else {
-            throw NSError()
-        }
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var buffer = Data(capacity: 128)
+        #elseif os(Linux)
+            guard var buffer = Data(capacity: 128) else {
+                throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
         
         buffer.append(ControlCode.connack.rawValue.data)
         buffer.append(UInt8(2).data)

@@ -33,13 +33,18 @@ struct UnSubackPacket {
 extension UnSubackPacket : ControlPacket {
 
     var description: String {
-        return String(ControlCode.unsuback)
+        return String(describing: ControlCode.unsuback)
     }
 
     mutating func write(writer: SocketWriter) throws {
-        guard var buffer = Data(capacity: 128) else {
-            throw ErrorCodes.errUnknown
-        }
+
+        #if os(macOS) || os(iOS) || os(watchOS)
+            var buffer = Data(capacity: 128)
+        #elseif os(Linux)
+            guard var buffer = Data(capacity: 128) else {
+                throw ErrorCodes.errCouldNotInitializeData
+            }
+        #endif
 
         buffer.append(packetId.data)
         
@@ -51,7 +56,7 @@ extension UnSubackPacket : ControlPacket {
             try writer.write(from: buffer)
 
         } catch {
-            throw NSError()
+            throw AphidError()
 
         }
     }

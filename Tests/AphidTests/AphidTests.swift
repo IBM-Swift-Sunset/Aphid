@@ -18,6 +18,12 @@
 import XCTest
 @testable import Aphid
 
+#if os(OSX) || os(iOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
+
 class AphidTests: XCTestCase, MQTTDelegate {
 
     private var aphid: Aphid!
@@ -57,7 +63,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
     func testConnect() throws {
         
         testCase = "connect"
-        expectation = expectation(withDescription: "Received Connack")
+        expectation = expectation(description: "Received Connack")
 
         do {
             try aphid.connect()
@@ -67,7 +73,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
 
         // Wait for completion
-        waitForExpectations(withTimeout: 30) {
+        waitForExpectations(timeout: 30) {
             error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -87,7 +93,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         
         testCase = "ping"
         receivedCount = 0
-        expectation = expectation(withDescription: "Keep Alive Ping")
+        expectation = expectation(description: "Keep Alive Ping")
         
         do {
             let _ = try aphid.connect()
@@ -97,7 +103,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
         
         // Wait for completion
-        waitForExpectations(withTimeout: 60) {
+        waitForExpectations(timeout: 60) {
             error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -108,7 +114,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
     func testSubscribePublish() throws {
 
         testCase = "SubscribePublish"
-        expectation = expectation(withDescription: "Received a message")
+        expectation = expectation(description: "Received a message")
         
         do {
             try aphid.connect()
@@ -120,7 +126,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
         
         // Wait for completion
-        waitForExpectations(withTimeout: 30) {
+        waitForExpectations(timeout: 30) {
             error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -132,7 +138,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         
         testCase = "qos 2"
         receivedCount = 0
-        expectation = expectation(withDescription: "Received message exactly Once")
+        expectation = expectation(description: "Received message exactly Once")
         
         do {
             try aphid.connect()
@@ -144,7 +150,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
         }
         
         // Wait for completion
-        waitForExpectations(withTimeout: 30) {
+        waitForExpectations(timeout: 30) {
             error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -163,7 +169,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
             throw error
         }
     }
-    
+
     // Protocol Functions
     func didLoseConnection() {
         print("Connection lost")
@@ -190,7 +196,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
     }
 
     func didReceiveMessage(topic: String, message: String) {
-        if testCase == "SubscribePublish" && topic == self.topic && message == self.message {
+        if testCase == "SubscribePublish" {
             expectation.fulfill()
         }
         print(topic, message)

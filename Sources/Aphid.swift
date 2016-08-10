@@ -25,16 +25,16 @@ public class Aphid {
 
     public var delegate: MQTTDelegate?
 
-    private var socket: Socket?
+    var socket: Socket?
 
-    private var buffer = Data()
+    var buffer: Data
 
-    private var keepAliveTimer: DispatchSourceTimer? = nil
+    var keepAliveTimer: DispatchSourceTimer? = nil
 
-    public let readQueue: DispatchQueue
-    public let writeQueue: DispatchQueue
+    let readQueue: DispatchQueue
+    let writeQueue: DispatchQueue
 
-    private var bound = 2
+    var bound = 2
 
     public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
          host: String = "localhost", port: Int32 = 1883) {
@@ -43,9 +43,10 @@ public class Aphid {
 
         Config.sharedInstance.setUser(clientId: clientId, username: username, password: password)
 
-        readQueue = DispatchQueue(label: "read queue", attributes: .concurrent)
-        writeQueue = DispatchQueue(label: "write queue", attributes: .concurrent)
+        readQueue = DispatchQueue(label: "read queue", attributes: DispatchQueue.Attributes.concurrent)
+        writeQueue = DispatchQueue(label: "write queue", attributes: DispatchQueue.Attributes.concurrent)
         
+        buffer = Data()
     }
 
     // Initial Connect
@@ -211,7 +212,7 @@ public class Aphid {
         }
     }
     
-    private func pubrel(packetId: UInt16) throws {
+    internal func pubrel(packetId: UInt16) throws {
 
         guard let sock = socket else {
             throw ErrorCodes.errSocketNotOpen
@@ -332,7 +333,7 @@ extension Aphid {
 
     func startTimer() {
 
-        keepAliveTimer = keepAliveTimer ?? DispatchSource.timer(flags: DispatchSource.TimerFlags.strict, queue: writeQueue)
+        keepAliveTimer = keepAliveTimer ?? DispatchSource.makeTimerSource(flags: DispatchSource.TimerFlags.strict, queue: writeQueue)
 
         keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(Int(config.keepAlive)), leeway: .milliseconds(500))
 
