@@ -58,7 +58,8 @@ public class Aphid {
         }
 
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
 
         do {
@@ -70,7 +71,7 @@ public class Aphid {
             
             try connectPacket.write(writer: sock)
 
-            try read()
+            read()
 
         } catch {
             print(error)
@@ -88,14 +89,16 @@ public class Aphid {
     public func reconnect() {
     }
 
-    public func disconnect() throws {
+    public func disconnect() {
         
         guard config.status != .disconnected else {
-            throw ErrorCodes.errAlreadyDisconnected
+            print(Errors.alreadyDisconnected)
+            return
         }
 
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
         
         writeQueue.async {
@@ -121,14 +124,16 @@ public class Aphid {
         }
     }
 
-    public func publish(topic: String, withMessage message: String, qos: QosType = .atLeastOnce, retain: Bool = false) throws {
+    public func publish(topic: String, withMessage message: String, qos: QosType = .atLeastOnce, retain: Bool = false) {
         
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
         
         guard topic.matches(pattern: config.publishPattern) else {
-            throw ErrorCodes.errInvalidTopicName
+            print(Errors.invalidTopicName)
+            return
         }
         
         writeQueue.async {
@@ -151,10 +156,11 @@ public class Aphid {
         }
     }
 
-    public func subscribe(topic: [String], qoss: [QosType]) throws {
+    public func subscribe(topic: [String], qoss: [QosType]) {
 
         guard let sock = socket else {
-                throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
 
         writeQueue.async {
@@ -172,10 +178,11 @@ public class Aphid {
         }
     }
 
-    public func unsubscribe(topics: [String]) throws {
+    public func unsubscribe(topics: [String]) {
 
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
 
         writeQueue.async {
@@ -196,7 +203,8 @@ public class Aphid {
     public func ping() throws {
 
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
 
         writeQueue.sync {
@@ -212,10 +220,11 @@ public class Aphid {
         }
     }
     
-    internal func pubrel(packetId: UInt16) throws {
+    internal func pubrel(packetId: UInt16) {
 
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
         
         writeQueue.async {
@@ -237,10 +246,12 @@ extension Aphid {
     public func setWill(topic: String, message: String? = nil, willQoS: QosType = .atMostOnce, willRetain: Bool = false) {
         config.will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
     }
-    public func read() throws {
+
+    public func read() {
 
         guard let sock = socket else {
-            throw ErrorCodes.errSocketNotOpen
+            print(Errors.socketNotOpen)
+            return
         }
         
         let iochannel = DispatchIO(type: DispatchIO.StreamType.stream, fileDescriptor: sock.socketfd, queue: readQueue, cleanupHandler: {
@@ -261,19 +272,9 @@ extension Aphid {
                 self.buffer.append(d, count: d.count)
 
                 if self.buffer.count >= 2 {
-                    do {
-                        let _ = try self.unpack()
-                    } catch {
-                        print(error)
-                    }
+                    let _ = self.unpack()
                 }
-                
-                do {
-                    try self.read()
-                } catch {
-                    print(error)
-                }
-                
+                self.read()
             }
         }
     }
@@ -291,7 +292,7 @@ extension Aphid {
         return (controlByte[0], length)
     }
 
-    func unpack() throws -> [ControlPacket]? {
+    func unpack() -> [ControlPacket]? {
 
         var packets = [ControlPacket]()
 
@@ -313,8 +314,9 @@ extension Aphid {
 
             buffer = buffer.subdata(in: Range(bound + bodyLength..<buffer.count))
 
-            guard let packet = try newControlPacket(header: controlByte, bodyLength: bodyLength, data: body) else {
-                throw ErrorCodes.errUnknown
+            guard let packet = newControlPacket(header: controlByte, bodyLength: bodyLength, data: body) else {
+                print(Errors.unrecognizedOpcode)
+                return nil
             }
 
             packets.append(packet)
@@ -326,13 +328,9 @@ extension Aphid {
             case _ as PubackPacket      : delegate?.didCompleteDelivery(token: packet.description)
             case _ as PubcompPacket     : delegate?.didCompleteDelivery(token: packet.description)
             case let p as PublishPacket : delegate?.didReceiveMessage(topic: p.topic, message: p.message)
-            case let p as PubrecPacket  : delegate?.didCompleteDelivery(token: packet.description)
-                do {
-                    try self.pubrel(packetId: p.packetId)
-
-                } catch {
-                    print("Could Not Respond to Pubrex")
-                }
+            case let p as PubrecPacket  :
+                                          delegate?.didCompleteDelivery(token: packet.description)
+                                          self.pubrel(packetId: p.packetId)
             default: delegate?.didCompleteDelivery(token: packet.description)
             }
         }
@@ -356,7 +354,7 @@ extension Aphid {
                     try self.ping()
 
                 } catch {
-                    
+                    print("Error Sending Ping Request")
                 }
             }
         }
@@ -373,10 +371,11 @@ extension Aphid {
 }
     
 extension Aphid {
-    func newControlPacket(header: Byte, bodyLength: Int, data: Data) throws -> ControlPacket? {
+    func newControlPacket(header: Byte, bodyLength: Int, data: Data) -> ControlPacket? {
 
         guard let code: ControlCode = ControlCode(rawValue: (header & 0xF0)) else {
-            throw ErrorCodes.errUnknown
+            print(Errors.unrecognizedOpcode)
+            return nil
         }
 
         switch code {
@@ -451,4 +450,3 @@ extension Aphid {
         socket?.delegate = try SSLService(usingConfiguration: SSLConfig)
     }
 }
-    

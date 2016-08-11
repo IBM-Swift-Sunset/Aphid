@@ -21,7 +21,7 @@ protocol ControlPacket {
     var description: String { get }
     mutating func write(writer: SocketWriter) throws
     mutating func unpack(reader: SocketReader)
-    func validate() -> ErrorCodes
+    func validate() -> MQTTErrors
 }
 
 public enum ControlCode: Byte {
@@ -42,20 +42,24 @@ public enum ControlCode: Byte {
     case reserved   = 0xf0
 }
 
-public enum ErrorCodes: Byte, Error {
-    case accepted                       = 0x00
-    case errRefusedBadProtocolVersion   = 0x01
-    case errRefusedIDRejected           = 0x02
-    case errServerUnavailable           = 0x03
-    case errBadUsernameOrPassword       = 0x04
-    case errNotAuthorize                = 0x05
-    case errUnknown                     = 0x06
+public enum MQTTErrors: Byte, Error {
+    case accepted                    = 0x00
+    case refusedBadProtocolVersion   = 0x01
+    case refusedIDRejected           = 0x02
+    case serverUnavailable           = 0x03
+    case badUsernameOrPassword       = 0x04
+    case notAuthorize                = 0x05
+    case unknown                     = 0x06
+}
+public enum Errors: Byte, Error {
     
-    case errConnectionNotMade           = 0x07
-    case errAlreadyDisconnected         = 0x08
-    case errSocketNotOpen               = 0x09
-    case errInvalidTopicName            = 0x0a
-    case errCouldNotInitializeData      = 0x0b
+    case connectionNotMade
+    case alreadyDisconnected
+    case socketNotOpen
+    case invalidTopicName
+    case couldNotInitializeData
+    case unrecognizedOpcode
+    case couldNotParsePacket
 }
 
 public enum ConnectionStatus: Int {

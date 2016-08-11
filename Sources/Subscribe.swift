@@ -60,7 +60,7 @@ extension SubscribePacket : ControlPacket {
         #elseif os(Linux)
             guard var packet = Data(capacity: 512),
                 var buffer = Data(capacity: 512) else {
-                    throw ErrorCodes.errCouldNotInitializeData
+                    throw Errors.errCouldNotInitializeData
             }
         #endif
 
@@ -70,7 +70,7 @@ extension SubscribePacket : ControlPacket {
 
             guard topic.matches(pattern: config.subscribePattern) else {
                 print(topic)
-                throw ErrorCodes.errInvalidTopicName
+                throw Errors.invalidTopicName
             }
 
             buffer.append(topic.data)
@@ -97,7 +97,7 @@ extension SubscribePacket : ControlPacket {
 
     mutating func unpack(reader: SocketReader) {
     }
-    func validate() -> ErrorCodes {
+    func validate() -> MQTTErrors {
         return .accepted
     }
 }

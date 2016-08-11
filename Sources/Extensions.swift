@@ -63,7 +63,7 @@ extension String {
             #endif
             return results > 0
         } catch {
-            print("Malformed Expression")
+            print("Malformed Subscribe or Publish Expression")
         }
         
         return false

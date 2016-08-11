@@ -52,7 +52,7 @@ extension UnsubscribePacket : ControlPacket {
         #elseif os(Linux)
             guard var packet = Data(capacity: 512),
                 var buffer = Data(capacity: 512) else {
-                    throw ErrorCodes.errCouldNotInitializeData
+                    throw Errors.errCouldNotInitializeData
             }
         #endif
         
@@ -82,7 +82,7 @@ extension UnsubscribePacket : ControlPacket {
     mutating func unpack(reader: SocketReader) {
     }
 
-    func validate() -> ErrorCodes {
+    func validate() -> MQTTErrors {
         return .accepted
     }
 }

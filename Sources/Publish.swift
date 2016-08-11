@@ -68,7 +68,7 @@ extension PublishPacket: ControlPacket {
         #elseif os(Linux)
             guard var packet = Data(capacity: 512),
                 var buffer = Data(capacity: 512) else {
-                    throw ErrorCodes.errCouldNotInitializeData
+                    throw Errors.errCouldNotInitializeData
             }
         #endif
         
@@ -92,7 +92,7 @@ extension PublishPacket: ControlPacket {
             try writer.write(from: packet)
 
         } catch {
-            throw ErrorCodes.errCouldNotInitializeData
+            throw Errors.couldNotInitializeData
 
         }
     }
@@ -100,7 +100,7 @@ extension PublishPacket: ControlPacket {
     mutating func unpack(reader: SocketReader) {
     }
 
-    func validate() -> ErrorCodes {
+    func validate() -> MQTTErrors {
         return .accepted
     }
 }
