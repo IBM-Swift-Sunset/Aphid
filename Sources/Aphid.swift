@@ -70,7 +70,7 @@ public class Aphid {
             
             try connectPacket.write(writer: sock)
 
-            read()
+            try read()
 
         } catch {
             print(error)
@@ -237,14 +237,15 @@ extension Aphid {
     public func setWill(topic: String, message: String? = nil, willQoS: QosType = .atMostOnce, willRetain: Bool = false) {
         config.will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
     }
-    public func read() {
+    public func read() throws {
 
         guard let sock = socket else {
-            return
+            throw ErrorCodes.errSocketNotOpen
         }
         
         let iochannel = DispatchIO(type: DispatchIO.StreamType.stream, fileDescriptor: sock.socketfd, queue: readQueue, cleanupHandler: {
             error in
+            
         })
 
         iochannel.read(offset: off_t(0), length: 1, queue: readQueue) {
@@ -260,28 +261,37 @@ extension Aphid {
                 self.buffer.append(d, count: d.count)
 
                 if self.buffer.count >= 2 {
-                    let _ = self.unpack()
+                    do {
+                        let _ = try self.unpack()
+                    } catch {
+                        print(error)
+                    }
                 }
-
-                self.read()
+                
+                do {
+                    try self.read()
+                } catch {
+                    print(error)
+                }
+                
             }
         }
     }
 
     func parseHeader() -> (Byte, Int)? {
-        let data = buffer.subdata(in: Range(0..<bound))
         
-        let controlByte: [Byte] = data.subdata(in: Range(0..<1)).map {
+        let controlByte: [Byte] = buffer.subdata(in: Range(0..<1)).map {
             byte in
             return byte
         }
-        guard let length = decodeLength(data.subdata(in: Range(1..<bound))) else {
+        guard let length = decodeLength(buffer.subdata(in: Range(1..<bound))) else {
             return nil
         }
+
         return (controlByte[0], length)
     }
 
-    func unpack() -> [ControlPacket]? {
+    func unpack() throws -> [ControlPacket]? {
 
         var packets = [ControlPacket]()
 
@@ -293,17 +303,19 @@ extension Aphid {
                 return packets
             }
             // Do we have all the bytes we need for the full packet?
-            let bytesNeeded = buffer.count - bodyLength - 2
+            let bytesNeeded = buffer.count - bodyLength - bound
 
             if bytesNeeded < 0 {
                 return nil
             }
-            
+
             let body = buffer.subdata(in: Range(bound..<bound + bodyLength))
 
             buffer = buffer.subdata(in: Range(bound + bodyLength..<buffer.count))
-            
-            let packet = newControlPacket(header: controlByte, bodyLength: bodyLength, data: body)!
+
+            guard let packet = try newControlPacket(header: controlByte, bodyLength: bodyLength, data: body) else {
+                throw ErrorCodes.errUnknown
+            }
 
             packets.append(packet)
 
@@ -361,8 +373,12 @@ extension Aphid {
 }
     
 extension Aphid {
-    func newControlPacket(header: Byte, bodyLength: Int, data: Data) -> ControlPacket? {
-        let code: ControlCode = ControlCode(rawValue: (header & 0xF0))!
+    func newControlPacket(header: Byte, bodyLength: Int, data: Data) throws -> ControlPacket? {
+
+        guard let code: ControlCode = ControlCode(rawValue: (header & 0xF0)) else {
+            throw ErrorCodes.errUnknown
+        }
+
         switch code {
         case .connect:
             return ConnectPacket(data: data)
