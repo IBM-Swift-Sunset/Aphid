@@ -52,7 +52,7 @@ extension UnsubscribePacket : ControlPacket {
         #elseif os(Linux)
             guard var packet = Data(capacity: 512),
                 var buffer = Data(capacity: 512) else {
-                    throw Errors.errCouldNotInitializeData
+                    throw Errors.couldNotInitializeData
             }
         #endif
         

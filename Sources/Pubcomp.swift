@@ -38,7 +38,7 @@ struct PubcompPacket : ControlPacket {
             var buffer = Data(capacity: 128)
         #elseif os(Linux)
             guard var buffer = Data(capacity: 128) else {
-                throw Errors.errCouldNotInitializeData
+                throw Errors.couldNotInitializeData
             }
         #endif
 

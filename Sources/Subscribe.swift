@@ -60,7 +60,7 @@ extension SubscribePacket : ControlPacket {
         #elseif os(Linux)
             guard var packet = Data(capacity: 512),
                 var buffer = Data(capacity: 512) else {
-                    throw Errors.errCouldNotInitializeData
+                    throw Errors.couldNotInitializeData
             }
         #endif
 
@@ -69,8 +69,8 @@ extension SubscribePacket : ControlPacket {
         for (topic, qos) in zip(topics, qoss) {
 
             guard topic.matches(pattern: config.subscribePattern) else {
-                print(topic)
-                throw Errors.invalidTopicName
+                print(Errors.invalidTopicName)
+                return
             }
 
             buffer.append(topic.data)
