@@ -32,8 +32,8 @@ class AphidTests: XCTestCase, MQTTDelegate {
     var receivedCount = 0
     
     let topic = "plants/basilplant"
-    let message = "Basilplant #1 needs to be watered"
-   
+    let message2 = "Basilplant #1 needs to be watered"
+    let message = "{\"payload\":\"An5oww==\",\"fields\":{\"beaconId\":2,\"humidy\":55.5234375,\"temp\":24.536250000000003},\"port\":1,\"counter\":633,\"dev_eui\":\"C0EE400001010916\",\"metadata\":[{\"frequency\":868.1,\"datarate\":\"SF12BW125\",\"codingrate\":\"4/5\",\"gateway_timestamp\":2806201428,\"gateway_time\":\"2016-08-11T16:16:01.687021Z\",\"channel\":0,\"server_time\":\"2016-08-11T16:16:01.710438775Z\",\"rssi\":-30,\"lsnr\":9.8,\"rfchain\":1,\"crc\":1,\"modulation\":\"LORA\",\"gateway_eui\":\"B827EBFFFEC139EF\",\"altitude\":8,\"longitude\":-1.7645,\"latitude\":54.9837}]}"
     weak var expectation: XCTestExpectation!
     
     var tokens = [String]()
@@ -80,13 +80,9 @@ class AphidTests: XCTestCase, MQTTDelegate {
             }
         }
 
-        do {
-            try aphid.disconnect()
-            sleep(5)
-        } catch {
-            throw error
+        aphid.disconnect()
+        sleep(5)
 
-        }
     }
 
     func testKeepAlive() throws {
@@ -118,8 +114,8 @@ class AphidTests: XCTestCase, MQTTDelegate {
         
         do {
             try aphid.connect()
-            try aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
-            try aphid.publish(topic: topic, withMessage: message, qos: QosType.exactlyOnce)
+            aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
+            aphid.publish(topic: topic, withMessage: message, qos: QosType.exactlyOnce)
             
         } catch {
             throw error
@@ -142,8 +138,8 @@ class AphidTests: XCTestCase, MQTTDelegate {
         
         do {
             try aphid.connect()
-            try aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
-            try aphid.publish(topic: topic, withMessage: message, qos: .exactlyOnce)
+            aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
+            aphid.publish(topic: topic, withMessage: message, qos: .exactlyOnce)
             
         } catch {
             throw error
@@ -164,7 +160,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
 
         do {
             try aphid.connect()
-            try aphid.disconnect()
+            aphid.disconnect()
         } catch {
             throw error
         }

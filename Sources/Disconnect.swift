@@ -31,7 +31,7 @@ struct DisconnectPacket: ControlPacket {
             var buffer = Data(capacity: 2)
         #elseif os(Linux)
             guard var buffer = Data(capacity: 2) else {
-                throw ErrorCodes.errCouldNotInitializeData
+                throw Errors.couldNotInitializeData
             }
         #endif
 
@@ -43,7 +43,7 @@ struct DisconnectPacket: ControlPacket {
     func unpack(reader: SocketReader) {
     }
 
-    func validate() -> ErrorCodes {
+    func validate() -> MQTTErrors {
         return .accepted
     }
 }

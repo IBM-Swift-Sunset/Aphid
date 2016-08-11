@@ -43,7 +43,7 @@ extension ConnackPacket: ControlPacket {
             var buffer = Data(capacity: 128)
         #elseif os(Linux)
             guard var buffer = Data(capacity: 128) else {
-                throw ErrorCodes.errCouldNotInitializeData
+                throw Errors.couldNotInitializeData
             }
         #endif
         
@@ -64,16 +64,16 @@ extension ConnackPacket: ControlPacket {
     mutating func unpack(reader: SocketReader) {
     }
 
-    func validate() -> ErrorCodes {
+    func validate() -> MQTTErrors {
 
         switch responseCode {
         case 0: return .accepted
-        case 1: return .errRefusedBadProtocolVersion
-        case 2: return .errRefusedIDRejected
-        case 3: return .errServerUnavailable
-        case 4: return .errBadUsernameOrPassword
-        case 5: return .errNotAuthorize
-        default: return .errUnknown
+        case 1: return .refusedBadProtocolVersion
+        case 2: return .refusedIDRejected
+        case 3: return .serverUnavailable
+        case 4: return .badUsernameOrPassword
+        case 5: return .notAuthorize
+        default: return .unknown
         }
     }
 }

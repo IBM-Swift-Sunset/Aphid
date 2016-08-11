@@ -22,7 +22,7 @@ import XCTest
 class PacketTests: XCTestCase {
 
 
-    func testPackUnpackConnect() {
+    /*func testPackUnpackConnect() {
 
         XCTAssert(true)
     }
@@ -80,11 +80,11 @@ class PacketTests: XCTestCase {
     func testPackUnpackUnsubscribe() {
 
         XCTAssert(true)
-    }
+    }*/
 
     static var allTests: [(String, (PacketTests) -> () throws -> Void)] {
         return [
-            ("testPackUnpackConnect", testPackUnpackConnect),
+            //("testPackUnpackConnect", testPackUnpackConnect),
         ]
     }
 
