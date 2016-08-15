@@ -25,14 +25,7 @@ struct PingreqPacket: ControlPacket {
     }
 
     mutating func write(writer: SocketWriter) throws {
-
-        #if os(macOS) || os(iOS) || os(watchOS)
-            var buffer = Data(capacity: 2)
-        #elseif os(Linux)
-            guard var buffer = Data(capacity: 2) else {
-                throw Errors.couldNotInitializeData
-            }
-        #endif
+        var buffer = Data(capacity: 2)
 
         buffer.append(ControlCode.pingreq.rawValue.data)
         buffer.append(0.data)
