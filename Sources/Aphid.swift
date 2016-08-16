@@ -21,7 +21,7 @@ import Dispatch
 
 public typealias Byte = UInt8
 
-public class Aphid {
+open class Aphid {
 
     public var delegate: MQTTDelegate?
 
