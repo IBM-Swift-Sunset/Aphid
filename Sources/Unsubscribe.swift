@@ -45,16 +45,8 @@ extension UnsubscribePacket : ControlPacket {
     }
 
     mutating func write(writer: SocketWriter) throws {
-
-        #if os(macOS) || os(iOS) || os(watchOS)
-            var packet = Data(capacity: 512)
-            var buffer = Data(capacity: 512)
-        #elseif os(Linux)
-            guard var packet = Data(capacity: 512),
-                var buffer = Data(capacity: 512) else {
-                    throw Errors.couldNotInitializeData
-            }
-        #endif
+        var packet = Data(capacity: 512)
+        var buffer = Data(capacity: 512)
         
         buffer.append(packetId.data)
 

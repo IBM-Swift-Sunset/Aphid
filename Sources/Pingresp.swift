@@ -24,15 +24,8 @@ struct PingrespPacket: ControlPacket {
         return String(describing: ControlCode.pingresp)
     }
     
-    mutating func write(writer: SocketWriter) throws {
-        
-        #if os(macOS) || os(iOS) || os(watchOS)
-            var buffer = Data(capacity: 2)
-        #elseif os(Linux)
-            guard var buffer = Data(capacity: 2) else {
-                throw Errors.couldNotInitializeData
-            }
-        #endif
+    mutating func write(writer: SocketWriter) throws {      
+        var buffer = Data(capacity: 2)
         
         buffer.append(ControlCode.pingresp.rawValue.data)
         buffer.append(0.data)
