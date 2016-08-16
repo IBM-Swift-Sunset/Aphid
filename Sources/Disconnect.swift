@@ -25,16 +25,10 @@ struct DisconnectPacket: ControlPacket {
     var description: String {
         return String(describing: ControlCode.disconnect)
     }
+    
     func write(writer: SocketWriter) throws {
-
-        #if os(macOS) || os(iOS) || os(watchOS)
-            var buffer = Data(capacity: 2)
-        #elseif os(Linux)
-            guard var buffer = Data(capacity: 2) else {
-                throw Errors.couldNotInitializeData
-            }
-        #endif
-
+	    var buffer = Data(capacity: 2)
+	    
         buffer.append(ControlCode.disconnect.rawValue.data)
         buffer.append(0.data)
         try writer.write(from: buffer)

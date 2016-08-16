@@ -33,15 +33,8 @@ struct PubrelPacket : ControlPacket {
     }
     
     mutating func write(writer: SocketWriter) throws {
-
-        #if os(macOS) || os(iOS) || os(watchOS)
-            var buffer = Data(capacity: 128)
-        #elseif os(Linux)
-            guard var buffer = Data(capacity: 128) else {
-                throw Errors.couldNotInitializeData
-            }
-        #endif
-        
+        var buffer = Data(capacity: 128)
+      
         buffer.append((ControlCode.pubrel.rawValue | 0x02).data)
         buffer.append(2.data)
         buffer.append(packetId.data)
