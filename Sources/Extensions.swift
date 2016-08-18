@@ -35,19 +35,21 @@ extension String {
     var data: Data {
         var array = Data()
         
-        let utf = self.data(using: String.Encoding.utf8)!
-        array.append(UInt16(utf.count).data)
-        array.append(utf)
-        
+        if let utf = self.data(using: String.Encoding.utf8) {
+            array.append(UInt16(utf.count).data)
+            array.append(utf)
+        } else {
+            array.append(UInt16(0).data)
+        }
         return array
     }
     
     var sData: Data {
         var array = Data()
         
-        let utf = self.data(using: String.Encoding.utf8)!
-        array.append(utf)
-        
+        if let utf = self.data(using: String.Encoding.utf8) {
+            array.append(utf)
+        }
         return array
     }
     
