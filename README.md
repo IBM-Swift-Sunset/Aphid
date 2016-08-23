@@ -4,7 +4,7 @@ A lightweight MQTT 3.1.1 client written in pure Swift 3.
 
 [![Build Status](https://travis-ci.org/IBM-Swift/Aphid.svg?branch=master)](https://travis-ci.org/IBM-Swift/Aphid)
 ![](https://img.shields.io/badge/Swift-3.0-orange.svg?style=flat)
-![](https://img.shields.io/badge/Snapshot-8/15-blue.svg?style=flat)
+![](https://img.shields.io/badge/Snapshot-8/18-blue.svg?style=flat)
 
 ## Features:
 
@@ -29,7 +29,7 @@ Unfortunately there are some issues with the Swift Package Manager and Dispatch 
 
 ## Setup your project to use Aphid 
 
-> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-08-15-a toolchain` (Minimum REQUIRED for latest release)
+> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-08-18-a toolchain` (Minimum REQUIRED for latest release)
 
 1. Install OpenSSL:
 
