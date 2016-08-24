@@ -4,7 +4,7 @@ A lightweight MQTT 3.1.1 client written in pure Swift 3.
 
 [![Build Status](https://travis-ci.org/IBM-Swift/Aphid.svg?branch=master)](https://travis-ci.org/IBM-Swift/Aphid)
 ![](https://img.shields.io/badge/Swift-3.0-orange.svg?style=flat)
-![](https://img.shields.io/badge/Snapshot-8/18-blue.svg?style=flat)
+![](https://img.shields.io/badge/Snapshot-8/23-blue.svg?style=flat)
 
 ## Features:
 
@@ -29,7 +29,7 @@ Unfortunately there are some issues with the Swift Package Manager and Dispatch 
 
 ## Setup your project to use Aphid 
 
-> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-08-18-a toolchain` (Minimum REQUIRED for latest release)
+> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-08-23-a toolchain` (Minimum REQUIRED for latest release)
 
 1. Install OpenSSL:
 
@@ -47,14 +47,11 @@ Unfortunately there are some issues with the Swift Package Manager and Dispatch 
             .Package(url: "https://github.com/IBM-Swift/Aphid.git", majorVersion: 0, minor: 2)
         ])
     ```
-3. Setup XCode to build library (Optional)
+3. Create XCode project to build library (Optional)
 
-    Navigate to your XCode project build settings then in both the `SSLService` and `Aphid` Targets add:
-
-    - Add `/usr/local/opt/openssl/include` to its Header Search Paths
-    - Add `/usr/local/opt/openssl/lib` to its Library Search Paths
-
-    Note: If interested in the test cases, `AphidTestCases` target will also need `/usr/local/opt/openssl/lib` added to its Library Search Paths
+    ```
+    $ swift package generate-xcodeproj -Xswiftc -I/usr/local/opt/openssl/include -Xlinker -L/usr/local/opt/openssl/lib
+    ```
 
 4. In Sources/main.swift, import the Aphid module.
 
