@@ -50,7 +50,9 @@ Unfortunately there are some issues with the Swift Package Manager and Dispatch 
 3. Create XCode project to build library (Optional)
 
     ```
-    $ swift package generate-xcodeproj -Xswiftc -I/usr/local/opt/openssl/include -Xlinker -L/usr/local/opt/openssl/lib
+    $ swift package generate-xcodeproj \
+            -Xswiftc -I/usr/local/opt/openssl/include \
+            -Xlinker -L/usr/local/opt/openssl/lib
     ```
 
 4. In Sources/main.swift, import the Aphid module.
