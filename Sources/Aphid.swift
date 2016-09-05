@@ -25,16 +25,16 @@ open class Aphid {
 
     public var delegate: MQTTDelegate?
 
-    var socket: Socket?
+    internal var socket: Socket?
 
-    var buffer: Data
+    internal var buffer: Data
 
-    var keepAliveTimer: DispatchSourceTimer? = nil
+    internal var keepAliveTimer: DispatchSourceTimer? = nil
 
-    var bound = 2
+    internal var bound = 2
 
-    let readQueue: DispatchQueue
-    let writeQueue: DispatchQueue
+    internal let readQueue: DispatchQueue
+    internal let writeQueue: DispatchQueue
 
     public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
          host: String = "localhost", port: Int32 = 1883) {
@@ -54,34 +54,20 @@ open class Aphid {
 
         if socket == nil {
             socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
-
         }
+        
+        try socket!.setBlocking(mode: false)
+        
+        try socket!.connect(to: config.host, port: config.port)
 
-        guard let sock = socket else {
-            delegate?.didLoseConnection(error: Errors.socketNotOpen)
-            return
-        }
-
-        do {
-            var connectPacket = ConnectPacket()
+        requestHandler(packet: ConnectPacket()) {
             
-            try sock.setBlocking(mode: false)
+            self.startTimer()
 
-            try sock.connect(to: config.host, port: config.port)
+            self.read()
             
-            try connectPacket.write(writer: sock)
-
-            read()
-
-        } catch {
-            print(error)
-
+            config.status = .connected
         }
-
-        startTimer()
-
-        config.status = .connected
-
     }
 
     public func reconnect() {
@@ -94,150 +80,79 @@ open class Aphid {
             return
         }
 
-        guard let sock = socket else {
-            delegate?.didLoseConnection(error: Errors.socketNotOpen)
-            return
-        }
-        
-        writeQueue.async {
-            do {
-                let disconnectPacket = DisconnectPacket()
+        requestHandler(packet: DisconnectPacket()) {
 
-                try disconnectPacket.write(writer: sock)
+            config.status = .disconnected
 
-                config.status = .disconnected
+            sleep(config.quiesce)   // Sleep to allow buffering packets to be sent
 
-                sleep(config.quiesce)   // Sleep to allow buffering packets to be sent
+            self.socket?.close()
 
-                sock.close()
+            self.buffer = Data()
 
-                self.buffer = Data()
+            self.keepAliveTimer = nil
 
-                self.keepAliveTimer = nil
-                
-                self.delegate?.didLoseConnection(error: nil)
-
-            } catch {
-                 print(error)
-
-            }
+            self.delegate?.didLoseConnection(error: nil)
         }
     }
 
     public func publish(topic: String, withMessage message: String, qos: QosType = .atLeastOnce, retain: Bool = false) {
-        
-        guard let sock = socket else {
-            delegate?.didLoseConnection(error: Errors.socketNotOpen)
-            return
-        }
-        
+
         guard topic.matches(pattern: config.publishPattern) else {
             print(Errors.invalidTopicName)
             return
         }
-        
-        writeQueue.async {
-            do {
-                // Dup: we have to decide if this the first time this is sent or just a duplicate; not the user's job
-                var publishPacket = PublishPacket(topic: topic, message: message, dup: false, qos: qos, willRetain: retain)
-                
-                try publishPacket.write(writer: sock)
-                
-                if qos ==  .atMostOnce{
-                    self.delegate?.didCompleteDelivery(token: String(publishPacket.identifier))
-                }
 
-                self.resetTimer()
-                
-            } catch {
-                print(error)
-                
+        let publishPacket = PublishPacket(topic: topic, message: message, dup: false, qos: qos, willRetain: retain)
+
+        requestHandler(packet: publishPacket) {
+
+            if qos ==  .atMostOnce{
+                self.delegate?.didCompleteDelivery(token: String(publishPacket.identifier))
             }
         }
     }
 
     public func subscribe(topic: [String], qoss: [QosType]) {
-
-        guard let sock = socket else {
-            delegate?.didLoseConnection(error: Errors.socketNotOpen)
-            return
-        }
-
-        writeQueue.async {
-            do {
-                var subscribePacket = SubscribePacket(topics: topic, qoss: qoss)
-                
-                try subscribePacket.write(writer: sock)
-
-                self.resetTimer()
-
-            } catch {
-                print(error)
-
-            }
-        }
+        requestHandler(packet: SubscribePacket(topics: topic, qoss: qoss))
     }
 
     public func unsubscribe(topics: [String]) {
-
-        guard let sock = socket else {
-            delegate?.didLoseConnection(error: Errors.socketNotOpen)
-            return
-        }
-
-        writeQueue.async {
-            do {
-                var unsubscribePacket = UnsubscribePacket(topics: topics)
-                
-                try unsubscribePacket.write(writer: sock)
-
-                self.resetTimer()
-
-            } catch {
-                print(error)
-
-            }
-        }
+        requestHandler(packet: UnsubscribePacket(topics: topics))
     }
 
     public func ping() throws {
-
-        guard let sock = socket else {
-            delegate?.didLoseConnection(error: Errors.socketNotOpen)
-            return
-        }
-
-        writeQueue.async {
-            do {
-                var pingreqPacket = PingreqPacket()
-                
-                try pingreqPacket.write(writer: sock)
-
-            } catch {
-                print(error)
-
-            }
-        }
+        requestHandler(packet: PingreqPacket())
     }
     
     internal func pubrel(packetId: UInt16) {
+        requestHandler(packet: PubrelPacket(packetId: packetId))
+    }
 
+    internal func requestHandler(packet: ControlPacket, onCompletion: (()->())? = nil) {
+        
         guard let sock = socket else {
             delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
 
+        var packet = packet
+
         writeQueue.async {
             do {
-                var pubrelPacket = PubrelPacket(packetId: packetId)
+                try packet.write(writer: sock)
 
-                try pubrelPacket.write(writer: sock)
+                switch packet {
+                case is PingreqPacket   : break
+                case is ConnectPacket   : break
+                default                 : self.resetTimer()
+                }
                 
-                self.resetTimer()
+                if let onComp = onCompletion { onComp() }
 
             } catch {
                 print(error)
-
+                
             }
         }
     }
@@ -255,7 +170,7 @@ extension Aphid {
             delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
-        
+
         let iochannel = DispatchIO(type: DispatchIO.StreamType.stream, fileDescriptor: sock.socketfd, queue: readQueue, cleanupHandler: {
             error in
             
@@ -293,8 +208,8 @@ extension Aphid {
     }
 
     internal func unpack() {
-
-        while buffer.count >= 2  {
+        
+        while buffer.count >= bound  {
 
             // See if we have a header
             guard let (controlByte, bodyLength) = parseHeader() else {
