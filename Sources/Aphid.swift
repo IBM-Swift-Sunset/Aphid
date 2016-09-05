@@ -31,10 +31,10 @@ open class Aphid {
 
     var keepAliveTimer: DispatchSourceTimer? = nil
 
+    var bound = 2
+
     let readQueue: DispatchQueue
     let writeQueue: DispatchQueue
-
-    var bound = 2
 
     public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
          host: String = "localhost", port: Int32 = 1883) {
@@ -58,7 +58,7 @@ open class Aphid {
         }
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
 
@@ -82,8 +82,6 @@ open class Aphid {
 
         config.status = .connected
 
-        delegate?.didConnect()
-
     }
 
     public func reconnect() {
@@ -97,7 +95,7 @@ open class Aphid {
         }
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
         
@@ -116,6 +114,8 @@ open class Aphid {
                 self.buffer = Data()
 
                 self.keepAliveTimer = nil
+                
+                self.delegate?.didLoseConnection(error: nil)
 
             } catch {
                  print(error)
@@ -127,7 +127,7 @@ open class Aphid {
     public func publish(topic: String, withMessage message: String, qos: QosType = .atLeastOnce, retain: Bool = false) {
         
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
         
@@ -159,7 +159,7 @@ open class Aphid {
     public func subscribe(topic: [String], qoss: [QosType]) {
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
 
@@ -181,7 +181,7 @@ open class Aphid {
     public func unsubscribe(topics: [String]) {
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
 
@@ -203,11 +203,11 @@ open class Aphid {
     public func ping() throws {
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
 
-        writeQueue.sync {
+        writeQueue.async {
             do {
                 var pingreqPacket = PingreqPacket()
                 
@@ -223,16 +223,18 @@ open class Aphid {
     internal func pubrel(packetId: UInt16) {
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
-        
+
         writeQueue.async {
             do {
                 var pubrelPacket = PubrelPacket(packetId: packetId)
-                
+
                 try pubrelPacket.write(writer: sock)
                 
+                self.resetTimer()
+
             } catch {
                 print(error)
 
@@ -247,10 +249,10 @@ extension Aphid {
         config.will = LastWill(topic: topic, message: message, qos: willQoS, retain: willRetain)
     }
 
-    public func read() {
+    internal func read() {
 
         guard let sock = socket else {
-            print(Errors.socketNotOpen)
+            delegate?.didLoseConnection(error: Errors.socketNotOpen)
             return
         }
         
@@ -271,43 +273,39 @@ extension Aphid {
 
                 self.buffer.append(d, count: d.count)
 
-                if self.buffer.count >= 2 {
-                    let _ = self.unpack()
+                if self.buffer.count >= self.bound {
+                    self.unpack()
                 }
                 self.read()
             }
         }
     }
 
-    func parseHeader() -> (Byte, Int)? {
+    internal func parseHeader() -> (Byte, Int)? {
         
-        let controlByte: [Byte] = buffer.subdata(in: Range(0..<1)).map {
-            byte in
-            return byte
-        }
+        let controlByte: Byte = buffer[0]
+
         guard let length = decodeLength(buffer.subdata(in: Range(1..<bound))) else {
             return nil
         }
 
-        return (controlByte[0], length)
+        return (controlByte, length)
     }
 
-    func unpack() -> [ControlPacket]? {
+    internal func unpack() {
 
-        var packets = [ControlPacket]()
+        while buffer.count >= 2  {
 
-        while buffer.count >= 2 {
-            
-            // See if we have enough bytes for the header
+            // See if we have a header
             guard let (controlByte, bodyLength) = parseHeader() else {
                 bound += 1
-                return packets
+                return
             }
             // Do we have all the bytes we need for the full packet?
             let bytesNeeded = buffer.count - bodyLength - bound
-
+            
             if bytesNeeded < 0 {
-                return nil
+                return
             }
 
             let body = buffer.subdata(in: Range(bound..<bound + bodyLength))
@@ -316,10 +314,8 @@ extension Aphid {
 
             guard let packet = newControlPacket(header: controlByte, bodyLength: bodyLength, data: body) else {
                 print(Errors.unrecognizedOpcode)
-                return nil
+                return
             }
-
-            packets.append(packet)
 
             bound = 2
 
@@ -334,14 +330,12 @@ extension Aphid {
             default: delegate?.didCompleteDelivery(token: packet.description)
             }
         }
-
-        return packets
     }
 }
 
 extension Aphid {
 
-    func startTimer() {
+    internal func startTimer() {
 
         keepAliveTimer = keepAliveTimer ?? DispatchSource.makeTimerSource(flags: DispatchSource.TimerFlags.strict, queue: writeQueue)
 
@@ -363,7 +357,7 @@ extension Aphid {
 
     }
 
-    func resetTimer() {
+    internal func resetTimer() {
         keepAliveTimer?.cancel()
         keepAliveTimer = nil
         startTimer()
@@ -371,7 +365,7 @@ extension Aphid {
 }
     
 extension Aphid {
-    func newControlPacket(header: Byte, bodyLength: Int, data: Data) -> ControlPacket? {
+    internal func newControlPacket(header: Byte, bodyLength: Int, data: Data) -> ControlPacket? {
 
         guard let code: ControlCode = ControlCode(rawValue: (header & 0xF0)) else {
             print(Errors.unrecognizedOpcode)
