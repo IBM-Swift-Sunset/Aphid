@@ -25,7 +25,7 @@ public protocol MQTTDelegate {
 
      throws: cause of the reason behind the loss of connection.
      */
-    func didLoseConnection()
+    func didLoseConnection(error: Error?)
 
     /**
      Called when delivery for a message has been completed, and all

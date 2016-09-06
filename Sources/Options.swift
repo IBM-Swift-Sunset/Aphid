@@ -47,7 +47,7 @@ public struct Config {
 	public var connectTimeout: UInt16
 	public var maxReconnectInterval: UInt16
 	public var autoReconnect: Bool
-    public var quiesce: UInt32 = 10
+    public var quiesce: UInt32 = 2
 	public var writeTimeout: UInt16?
     public var status: ConnectionStatus
     public var will: LastWill? = nil
