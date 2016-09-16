@@ -4,7 +4,6 @@ A lightweight MQTT 3.1.1 client written in pure Swift 3
 
 [![Build Status](https://travis-ci.org/IBM-Swift/Aphid.svg?branch=master)](https://travis-ci.org/IBM-Swift/Aphid)
 ![](https://img.shields.io/badge/Swift-3.0-orange.svg?style=flat)
-![](https://img.shields.io/badge/Snapshot-9/03-blue.svg?style=flat)
 
 ## Features:
 
@@ -21,15 +20,9 @@ A lightweight MQTT 3.1.1 client written in pure Swift 3
   - [ ] Blocking API
   - [ ] High Availability
 
-## Installing and using on the Raspberry Pi 3:
 
-Unfortunately there are some issues with the Swift Package Manager and Dispatch library that requires a lot of manual steps for your application to build. For a working set of steps, please refer to:
-
-[Compiling an Aphid application on the Raspberry Pi 3](https://github.com/IBM-Swift/Aphid/wiki/Compiling-an-Aphid-Application-on-the-Pi-3)
 
 ## Setup your project to use Aphid 
-
-> Requires `swift-DEVELOPMENT-SNAPSHOT-2016-09-03-a toolchain` (Minimum REQUIRED for latest release)
 
 1. Install OpenSSL:
 
@@ -78,7 +71,17 @@ If testing locally, we recommend the [Mosquitto broker](https://mosquitto.org/):
 
     - macOS: `brew install mosquitto`
     - Ubuntu Linux: `apt-get install mosquitto`
+    
+## Installing and using on the Raspberry Pi 3:
+
+[Compiling an Aphid application on the Raspberry Pi 3](https://github.com/IBM-Swift/Aphid/wiki/Compiling-an-Aphid-Application-on-the-Pi-3)
 
 ## License
 
-This library is licensed under Apache 2.0. Full license text is available in [LICENSE](LICENSE).
+Copyright 2016 IBM
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
