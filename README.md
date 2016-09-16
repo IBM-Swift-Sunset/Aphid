@@ -3,24 +3,8 @@
 A lightweight MQTT 3.1.1 client written in pure Swift 3
 
 [![Build Status](https://travis-ci.org/IBM-Swift/Aphid.svg?branch=master)](https://travis-ci.org/IBM-Swift/Aphid)
-![](https://img.shields.io/badge/Swift-3.0-orange.svg?style=flat)
-
-## Features:
-
-  - [x] MQTT 3.1
-  - [x] MQTT 3.1.1
-  - [x] LWT
-  - [x] SSL/TLS
-  - [ ] Message Persistence
-  - [ ] Automatic Reconnect
-  - [ ] Offline Buffering
-  - [ ] WebSocket Support
-  - [x] Standard TCP Support
-  - [x] Non-Blocking API
-  - [ ] Blocking API
-  - [ ] High Availability
-
-
+![](https://img.shields.io/badge/Swift-3.0%20RELEASE-orange.svg?style=flat)
+![](https://img.shields.io/badge/platform-Linux,%20macOS,%20ARM%20Linux-blue.svg?style=flat)
 
 ## Setup your project to use Aphid 
 
