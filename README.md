@@ -58,7 +58,10 @@ If testing locally, we recommend the [Mosquitto broker](https://mosquitto.org/):
     
 ## Installing and using on the Raspberry Pi 3:
 
-[Compiling an Aphid application on the Raspberry Pi 3](https://github.com/IBM-Swift/Aphid/wiki/Compiling-an-Aphid-Application-on-the-Pi-3)
+Applications that need to run on an ARM system must be compiled with the Swift compiler targetting the ARM platform. Here are some articles to get you started.
+
+- [Building Swift 3.0 on an ARMv7 system](http://dev.iachieved.it/iachievedit/building-swift-3-0-on-an-armv7-system/)
+- [Compiling an Aphid application on the Raspberry Pi 3](https://github.com/IBM-Swift/Aphid/wiki/Compiling-an-Aphid-Application-on-the-Pi-3)
 
 ## License
 
