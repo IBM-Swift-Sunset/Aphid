@@ -21,7 +21,7 @@ import Dispatch
 
 public typealias Byte = UInt8
 
-open class Aphid {
+public class Aphid {
 
     public var delegate: MQTTDelegate?
 
@@ -33,19 +33,17 @@ open class Aphid {
 
     internal var bound = 2
 
-    internal let readQueue: DispatchQueue
-    internal let writeQueue: DispatchQueue
+    let readQueue: DispatchQueue = DispatchQueue(label: "com.ibm.aphid.readQueue")
 
-    public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
-         host: String = "localhost", port: Int32 = 1883) {
+    public init(clientId: String,
+                cleanSess: Bool = true,
+                username: String? = nil, password: String? = nil,
+                host: String = "localhost", port: Int32 = 1883) {
 
-        let clientId = !cleanSess && (clientId == "") ? NSUUID().uuidString : clientId
+        let clientId = !cleanSess && (clientId == "") ? UUID().uuidString : clientId
 
         Config.sharedInstance.setUser(clientId: clientId, username: username, password: password)
 
-        readQueue = DispatchQueue(label: "read queue", attributes: DispatchQueue.Attributes.concurrent)
-        writeQueue = DispatchQueue(label: "write queue", attributes: DispatchQueue.Attributes.concurrent)
-        
         buffer = Data()
     }
 
@@ -138,7 +136,7 @@ open class Aphid {
 
         var packet = packet
 
-        writeQueue.async {
+        readQueue.async {
             do {
                 try packet.write(writer: sock)
 
@@ -252,13 +250,13 @@ extension Aphid {
 
     internal func startTimer() {
 
-        keepAliveTimer = keepAliveTimer ?? DispatchSource.makeTimerSource(flags: DispatchSource.TimerFlags.strict, queue: writeQueue)
+        keepAliveTimer = keepAliveTimer ?? DispatchSource.makeTimerSource(flags: DispatchSource.TimerFlags.strict, queue: readQueue)
 
         keepAliveTimer?.scheduleRepeating(deadline: .now(), interval: .seconds(Int(config.keepAlive)), leeway: .milliseconds(500))
 
         keepAliveTimer?.setEventHandler {
 
-            self.writeQueue.async {
+            self.readQueue.async {
                 do {
                     try self.ping()
 
