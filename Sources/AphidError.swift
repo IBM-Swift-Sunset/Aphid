@@ -16,4 +16,4 @@
 
 import Foundation
 
-struct AphidError: Error {}
+struct AphidError: LocalizedError {}
