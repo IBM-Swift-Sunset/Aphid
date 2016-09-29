@@ -41,7 +41,7 @@ A lightweight MQTT 3.1.1 client written in pure Swift 3
 5. Note: build locally with:
 
     - macOS: `swift build -Xcc -I/usr/local/opt/openssl/include -Xlinker -L/usr/local/opt/openssl/lib`
-    - Linux: `swift build -Xcc -fblocks`
+    - Linux: `swift build`
 
 ## Examples
 
