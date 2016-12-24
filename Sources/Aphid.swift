@@ -35,9 +35,15 @@ open class Aphid {
 
     internal let readQueue: DispatchQueue
     internal let writeQueue: DispatchQueue
-
-    public init(clientId: String, cleanSess: Bool = true, username: String? = nil, password: String? = nil,
-         host: String = "localhost", port: Int32 = 1883) {
+    
+    internal var autoReconnect: Bool
+    
+    public init(clientId: String,
+                cleanSess: Bool = true,
+                username: String? = nil,
+                password: String? = nil,
+                host: String = "localhost",
+                port: Int32 = 1883) {
 
         let clientId = !cleanSess && (clientId == "") ? NSUUID().uuidString : clientId
 
@@ -50,8 +56,13 @@ open class Aphid {
     }
 
     // Initial Connect
-    public func connect(withSSL: Bool = false, certPath: String? = nil, keyPath: String? = nil) throws {
+    public func connect(withSSL: Bool = false,
+                        certPath: String? = nil,
+                        keyPath: String? = nil,
+                        autoReconnect: Bool = false) throws {
 
+        self.autoReconnect = autoReconnect
+        
         if socket == nil {
             socket = try Socket.create(family: .inet6, type: .stream, proto: .tcp)
         }
@@ -264,6 +275,14 @@ extension Aphid {
 
                 } catch {
                     print("Error Sending Ping Request")
+                    
+                    if self.autoReconnect {
+                        do {
+                            try self.socket!.connect(to: config.host, port: config.port)
+                        } catch {
+                            print("Error reconnecting")
+                        }
+                    }
                 }
             }
         }
