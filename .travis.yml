@@ -5,7 +5,7 @@ matrix:
       dist: trusty
       sudo: required
     - os: osx
-      osx_image: xcode8
+      osx_image: xcode8.3
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update   ; fi
@@ -13,10 +13,14 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf -d   ; fi
 
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -y ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget https://swift.org/builds/swift-3.0.2-release/ubuntu1404/swift-3.0.2-RELEASE/swift-3.0.2-RELEASE-ubuntu14.04.tar.gz    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar xzvf swift-3.0.2-RELEASE-ubuntu14.04.tar.gz    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=swift-3.0.2-RELEASE-ubuntu14.04/usr/bin:$PATH    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -y install clang-3.8 lldb-3.8 libicu-dev libkqueue-dev libtool libcurl4-openssl-dev libbsd-dev libblocksruntime-dev build-essential libwrap0-dev libssl-dev libc-ares-dev uuid-dev xsltproc ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget https://swift.org/builds/swift-3.1-release/ubuntu1404/swift-3.1-RELEASE/swift-3.1-RELEASE-ubuntu14.04.tar.gz     ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar xzvf swift-3.1-RELEASE-ubuntu14.04.tar.gz    ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=swift-3.1-RELEASE-ubuntu14.04/usr/bin:$PATH    ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -y install clang-3.8 unzip wget tar ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CC=/usr/bin/clang-3.8 ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CXX=/usr/bin/clang-3.8 ; fi
+
+  # install Mosquitto broker for testing 
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo | sudo apt-add-repository ppa:mosquitto-dev/mosquitto-ppa  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y mosquitto  ; fi

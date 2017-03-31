@@ -17,6 +17,16 @@
 import Foundation
 import Socket
 
+#if os(Linux)
+    #if swift(>=3.1)
+        typealias RegularExpressionType = NSRegularExpression
+    #else
+        typealias RegularExpressionType = RegularExpression
+    #endif
+#else
+    typealias RegularExpressionType = NSRegularExpression
+#endif
+
 extension SocketWriter {
     func write(from data: Data) throws {
         try self.write(from: NSData(data: data))
@@ -56,13 +66,10 @@ extension String {
     func matches(pattern: String!) -> Bool {
         
         do {
-            #if os(Linux)
-                let regex = try RegularExpression(pattern: pattern, options: [])
-                let results = regex.numberOfMatches(in: self, options: .reportProgress, range: NSMakeRange(0, self.characters.count))
-            #else
-                let regex = try NSRegularExpression(pattern: pattern, options: [])
-                let results = regex.numberOfMatches(in: self, options: NSRegularExpression.MatchingOptions.reportProgress, range: NSMakeRange(0, self.characters.count))
-            #endif
+    
+            let regex = try RegularExpressionType(pattern: pattern, options: [])
+            let results = regex.numberOfMatches(in: self, options: .reportProgress, range: NSMakeRange(0, self.characters.count))
+
             return results > 0
         } catch {
             print("Malformed Subscribe or Publish Expression")
