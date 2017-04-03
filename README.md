@@ -3,7 +3,7 @@
 A lightweight MQTT 3.1.1 client written in pure Swift 3
 
 [![Build Status](https://travis-ci.org/IBM-Swift/Aphid.svg?branch=master)](https://travis-ci.org/IBM-Swift/Aphid)
-![](https://img.shields.io/badge/Swift-3.0%20RELEASE-orange.svg?style=flat)
+![](https://img.shields.io/badge/Swift-3.1%20RELEASE-orange.svg?style=flat)
 ![](https://img.shields.io/badge/platform-Linux,%20macOS,%20ARM%20Linux-blue.svg?style=flat)
 
 ## Setup your project to use Aphid 
@@ -65,7 +65,7 @@ Applications that need to run on an ARM system must be compiled with the Swift c
 
 ## License
 
-Copyright 2016 IBM
+Copyright 2017 IBM
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
