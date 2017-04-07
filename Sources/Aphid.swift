@@ -42,6 +42,7 @@ open class Aphid {
         let clientId = !cleanSess && (clientId == "") ? NSUUID().uuidString : clientId
 
         Config.sharedInstance.setUser(clientId: clientId, username: username, password: password)
+        Config.sharedInstance.addBroker(host: host, port: port)
 
         readQueue = DispatchQueue(label: "read queue", attributes: DispatchQueue.Attributes.concurrent)
         writeQueue = DispatchQueue(label: "write queue", attributes: DispatchQueue.Attributes.concurrent)
