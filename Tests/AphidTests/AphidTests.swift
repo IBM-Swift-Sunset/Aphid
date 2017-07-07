@@ -91,7 +91,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
             print("Error: \(error.localizedDescription)")
             XCTFail()
         }
-        waitForExpectations(timeout: 9) {
+        waitForExpectations(timeout: 90) {
             error in
             
             error != nil ? print("Error: \(error!.localizedDescription)") : self.disconnect()
@@ -115,7 +115,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
             XCTFail()
 
         }
-        waitForExpectations(timeout: 6) {
+        waitForExpectations(timeout: 60) {
             error in
             
             error != nil ? print("Error: \(error!.localizedDescription)") : self.disconnect()
@@ -148,17 +148,17 @@ class AphidTests: XCTestCase, MQTTDelegate {
     }
     
     func disconnect() {
-//        disconnectExpectation = expectation(description: "Disconnected")
+        disconnectExpectation = expectation(description: "Disconnected")
         
         aphid.disconnect()
         
-//        waitForExpectations(timeout: 20) {
-//            error in
-//            
-//            if let error = error {
-//                print("Error: \(error.localizedDescription)")
-//            }
-//        }
+        waitForExpectations(timeout: 20) {
+            error in
+            
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
     }
     // Protocol Functions
     func didLoseConnection(error: Error?) {
