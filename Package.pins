@@ -2,22 +2,16 @@
   "autoPin": true,
   "pins": [
     {
-      "package": "OpenSSL",
+      "package": "SSLService",
       "reason": null,
-      "repositoryURL": "https://github.com/IBM-Swift/OpenSSL.git",
-      "version": "0.3.1"
+      "repositoryURL": "https://github.com/IBM-Swift/BlueSSLService.git",
+      "version": "0.12.45"
     },
     {
       "package": "Socket",
       "reason": null,
       "repositoryURL": "https://github.com/IBM-Swift/BlueSocket.git",
-      "version": "0.12.43"
-    },
-    {
-      "package": "SSLService",
-      "reason": null,
-      "repositoryURL": "https://github.com/IBM-Swift/BlueSSLService.git",
-      "version": "0.12.31"
+      "version": "0.12.56"
     }
   ],
   "version": 1
