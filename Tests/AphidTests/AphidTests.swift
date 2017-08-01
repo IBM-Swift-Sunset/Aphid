@@ -105,9 +105,9 @@ class AphidTests: XCTestCase, MQTTDelegate {
         do {
         
         try aphid.connect()
-        
-        aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
-        
+
+        aphid.subscribe(topic: [topic], qoss: [.exactlyOnce])
+
         aphid.publish(topic: topic, withMessage: message, qos: QosType.exactlyOnce)
         } catch {
             expectation.fulfill()
@@ -127,11 +127,11 @@ class AphidTests: XCTestCase, MQTTDelegate {
         testCase = "qos 2"
         receivedCount = 0
         expectation = expectation(description: "Received message exactly Once")
-        
+
         do {
             try aphid.connect()
             
-            aphid.subscribe(topic: [topic], qoss: [.atMostOnce])
+            aphid.subscribe(topic: [topic], qoss: [.exactlyOnce])
             
             aphid.publish(topic: topic, withMessage: message, qos: .exactlyOnce)
         } catch {
@@ -139,7 +139,7 @@ class AphidTests: XCTestCase, MQTTDelegate {
             print("Error: \(error.localizedDescription)")
             XCTFail()
         }
-        
+
         waitForExpectations(timeout: 30) {
             error in
             
