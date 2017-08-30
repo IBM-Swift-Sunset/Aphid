@@ -12,8 +12,8 @@ Pod::Spec.new do |s|
   s.source = { :git => "https://github.com/IBM-Swift/Aphid.git", :tag => s.version.to_s }
   s.source_files = 'Sources/*.swift'
 
-  s.dependency 'BlueSocket', '~> 0.12'
-  s.dependency 'BlueSSLService', '~> 0.12'
+  s.dependency "BlueSocket", "~> 0.12"
+  s.dependency "BlueSSLService", "~> 0.12"
   
-  s.pod_target_xcconfig = { 'SWIFT_VERSION' => File.read('.swift-version').chomp }
+  s.pod_target_xcconfig = { "SWIFT_VERSION" => "3.1.1" }
 end
