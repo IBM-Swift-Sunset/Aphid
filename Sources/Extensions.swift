@@ -68,7 +68,7 @@ extension String {
         do {
     
             let regex = try RegularExpressionType(pattern: pattern, options: [])
-            let results = regex.numberOfMatches(in: self, options: .reportProgress, range: NSMakeRange(0, self.characters.count))
+            let results = regex.numberOfMatches(in: self, options: .reportProgress, range: NSMakeRange(0, self.count))
 
             return results > 0
         } catch {
