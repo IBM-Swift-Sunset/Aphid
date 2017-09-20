@@ -59,7 +59,7 @@ open class Aphid {
         
         try socket!.setBlocking(mode: false)
         
-        try socket!.connect(to: config.host, port: config.port)
+        try socket!.connect(to: config.host, port: config.port, timeout: 10)
 
         requestHandler(packet: ConnectPacket()) {
             
