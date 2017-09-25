@@ -1,3 +1,11 @@
+# Travis CI build file
+
+# whitelist (branches that should be built)
+branches:
+  only:
+    - master
+    - develop
+    - /^issue.*$/
 
 matrix:
   include:
@@ -6,19 +14,10 @@ matrix:
       sudo: required
     - os: osx
       osx_image: xcode9
+      sudo: required
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update   ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install curl mosquitto openssl ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf -d   ; fi
-
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -y ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget https://swift.org/builds/swift-4.0-release/ubuntu1404/swift-4.0-RELEASE/swift-4.0-RELEASE-ubuntu14.04.tar.gz     ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar xzvf swift-4.0-RELEASE-ubuntu14.04.tar.gz    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=swift-4.0-RELEASE-ubuntu14.04/usr/bin:$PATH    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -y install clang-3.8 unzip wget tar ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CC=/usr/bin/clang-3.8 ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CXX=/usr/bin/clang-3.8 ; fi
+  - git clone https://github.com/IBM-Swift/Package-Builder.git
 
   # install Mosquitto broker for testing 
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo | sudo apt-add-repository ppa:mosquitto-dev/mosquitto-ppa  ; fi
@@ -26,6 +25,9 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y mosquitto  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mosquitto -c /etc/mosquitto/mosquitto.conf -d ; fi
 
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update   ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install curl mosquitto openssl ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf -d   ; fi
+
 script:
-  - swift build
-  - swift test
+  - ./Package-Builder/build-package.sh -projectDir $TRAVIS_BUILD_DIR 
